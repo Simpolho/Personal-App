@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { describeAmount, formatNumber, formatWhole } from './format';
+import { describeAmount, formatNumber, formatWhole, leftAfterText } from './format';
 
 test('formatNumber keeps at most two decimals and no trailing zeros', () => {
   expect(formatNumber(80)).toBe('80');
@@ -19,4 +19,10 @@ test('formatWhole rounds and never shows a negative zero', () => {
   expect(formatWhole(119.6)).toBe('120');
   expect(formatWhole(-0.2)).toBe('0');
   expect(formatWhole(-12.4)).toBe('-12');
+});
+test('leftAfterText lists only the targets that are set', () => {
+  expect(leftAfterText(null, { kcal: 100 })).toBeNull();
+  expect(leftAfterText({ kcal: 2300 }, { kcal: 379 })).toBe('Left after this: 1921 kcal');
+  expect(leftAfterText({ kcal: 2000, protein: 150, carbs: 200, fat: 70 }, { kcal: 2100, protein: 30.4 }))
+    .toBe('Left after this: -100 kcal · 120 g protein · 200 g carbs · 70 g fat');
 });

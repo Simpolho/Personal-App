@@ -1,3 +1,6 @@
+import type { Nutrients } from '../domain/nutrients';
+import { remaining, type TargetValues } from '../domain/targets';
+
 /** At most two decimals, no trailing zeros: 80, 80.5, 1.33. */
 export function formatNumber(n: number): string {
   return String(Math.round(n * 100) / 100);
@@ -14,4 +17,19 @@ export function describeAmount(amount: number, unit: string): string {
 /** Whole number for totals at a glance ("120 / 160 g"); never "-0". */
 export function formatWhole(n: number): string {
   return String(Math.round(n) || 0);
+}
+
+/**
+ * "Left after this: 1921 kcal · 120 g protein": what remains of the day's targets once the
+ * amount on screen is added. Only the targets that are set are listed; null when there are none.
+ */
+export function leftAfterText(targets: TargetValues | null, totalsAfter: Nutrients): string | null {
+  if (!targets) return null;
+  const left = remaining(targets, totalsAfter);
+  const parts: string[] = [];
+  if (left.kcal !== undefined) parts.push(`${formatWhole(left.kcal)} kcal`);
+  if (left.protein !== undefined) parts.push(`${formatWhole(left.protein)} g protein`);
+  if (left.carbs !== undefined) parts.push(`${formatWhole(left.carbs)} g carbs`);
+  if (left.fat !== undefined) parts.push(`${formatWhole(left.fat)} g fat`);
+  return parts.length > 0 ? `Left after this: ${parts.join(' · ')}` : null;
 }

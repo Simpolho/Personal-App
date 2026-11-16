@@ -178,3 +178,14 @@ test('a saved food can be edited and deleted; past entries keep their numbers', 
   expect(await screen.findByPlaceholderText('Search foods')).toBeInTheDocument();
   expect((await entries())[0]).toMatchObject({ nameSnapshot: 'Pão', nutrientsSnapshot: { kcal: 250 } });
 });
+test('clearing the search box goes back to the Recent list', async () => {
+  await logFood(meal.id, 'usda:173904', 80, 'g');
+  renderAt(`#/meal/${meal.id}/add`);
+  const search = await screen.findByPlaceholderText('Search foods');
+  await user.type(search, 'ban');
+  expect(await screen.findByText('Banana')).toBeInTheDocument();
+  await user.clear(search);
+  await waitFor(() => expect(screen.queryByText('Banana')).toBeNull());
+  expect(await screen.findByText('Oats')).toBeInTheDocument();
+  expect(screen.getByRole('tab', { name: 'Recent' })).toHaveAttribute('aria-selected', 'true');
+});

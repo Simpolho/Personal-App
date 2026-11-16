@@ -6,8 +6,8 @@ export { parseTableFile, TABLE_FILES, TABLES_VERSION, type TableFile, type Table
 
 /**
  * Loads the bundled food tables into IndexedDB the first time, and again whenever
- * TABLES_VERSION changes. A table file that is not there (404) is skipped. If nothing could be
- * fetched at all, nothing is marked as loaded, so the next launch tries again.
+ * TABLES_VERSION changes. A table file that is not there (404) is skipped. If any file fails to
+ * download, what did arrive is loaded but nothing is marked as done, so the next launch tries again.
  */
 export async function ensureTablesLoaded(fetchFn: typeof fetch = fetch): Promise<'loaded' | 'already'> {
   const current = await db.meta.get('tablesVersion');
@@ -15,14 +15,16 @@ export async function ensureTablesLoaded(fetchFn: typeof fetch = fetch): Promise
 
   const foods: TableFood[] = [];
   let filesRead = 0;
+  let failed = false;
   for (const path of TABLE_FILES) {
     try {
       const response = await fetchFn(path);
-      if (!response.ok) continue;
+      if (response.status === 404) continue; // this table is not bundled
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       foods.push(...parseTableFile((await response.json()) as TableFile));
       filesRead += 1;
     } catch {
-      // Offline or a broken file: leave it for the next launch.
+      failed = true; // offline or a broken download: try again next launch
     }
   }
   if (filesRead === 0) return 'loaded';
@@ -30,7 +32,7 @@ export async function ensureTablesLoaded(fetchFn: typeof fetch = fetch): Promise
   await db.transaction('rw', db.tableFoods, db.meta, async () => {
     await db.tableFoods.clear();
     await db.tableFoods.bulkPut(foods);
-    await db.meta.put({ key: 'tablesVersion', value: TABLES_VERSION });
+    if (!failed) await db.meta.put({ key: 'tablesVersion', value: TABLES_VERSION });
   });
   bumpTablesGeneration();
   return 'loaded';

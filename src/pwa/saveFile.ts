@@ -1,19 +1,25 @@
-/**
- * Hands a file to the user: through the share sheet where the phone offers it for files
- * (Save to Files, AirDrop…), otherwise as a download. 'cancelled' means the share sheet was
- * dismissed, so nothing was saved.
- */
-export async function shareOrDownload(file: File): Promise<'shared' | 'downloaded' | 'cancelled'> {
+type Outcome = 'shared' | 'downloaded' | 'cancelled' | 'blocked';
+
+/** True when the phone can hand files to its share sheet (Save to Files, AirDrop…). */
+export function canShareFile(file: File): boolean {
   const nav = navigator as Navigator & { canShare?: (data: ShareData) => boolean };
-  if (typeof nav.share === 'function' && nav.canShare?.({ files: [file] })) {
-    try {
-      await nav.share({ files: [file] });
-      return 'shared';
-    } catch (error) {
-      if ((error as { name?: string } | null)?.name === 'AbortError') return 'cancelled';
-      // Sharing was refused for another reason (e.g. too long after the tap): download instead.
-    }
+  return typeof nav.share === 'function' && Boolean(nav.canShare?.({ files: [file] }));
+}
+
+/**
+ * Opens the share sheet for a file. 'cancelled': the person dismissed it. 'blocked': the phone
+ * refused to open it (Safari only allows it right after a tap), so ask for another tap.
+ */
+export async function shareFile(file: File): Promise<Exclude<Outcome, 'downloaded'>> {
+  try {
+    await navigator.share({ files: [file] });
+    return 'shared';
+  } catch (error) {
+    return (error as { name?: string } | null)?.name === 'AbortError' ? 'cancelled' : 'blocked';
   }
+}
+
+export function downloadFile(file: File): void {
   const url = URL.createObjectURL(file);
   const link = document.createElement('a');
   link.href = url;
@@ -22,7 +28,6 @@ export async function shareOrDownload(file: File): Promise<'shared' | 'downloade
   link.click();
   link.remove();
   setTimeout(() => URL.revokeObjectURL?.(url), 30_000);
-  return 'downloaded';
 }
 
 export function readText(file: File): Promise<string> {

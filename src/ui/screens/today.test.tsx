@@ -1,6 +1,6 @@
 import { screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
-import { resetDb } from '../../db/db';
+import { db, resetDb } from '../../db/db';
 import { createMeal, getDay, quickAdd } from '../../db/log';
 import { setTargets } from '../../db/targets';
 import { renderAt, user } from '../../test/render';
@@ -74,4 +74,29 @@ test('the root route opens today', async () => {
 test('an address that is not a date goes to today', async () => {
   renderAt('#/day/not-a-date');
   expect(await screen.findByText('Mon 16 Nov')).toBeInTheDocument();
+});
+test('reopening the app the next morning shows the new day, not yesterday', async () => {
+  vi.setSystemTime(new Date('2026-11-16T22:00:00Z'));
+  renderAt('#/day/2026-11-16');
+  expect(await screen.findByText('Mon 16 Nov')).toBeInTheDocument();
+  vi.setSystemTime(new Date('2026-11-17T08:00:00Z'));
+  document.dispatchEvent(new Event('visibilitychange'));
+  expect(await screen.findByText('Tue 17 Nov')).toBeInTheDocument();
+});
+test('reopening while looking at an earlier day stays on that day', async () => {
+  renderAt('#/day/2026-11-10');
+  expect(await screen.findByText('Tue 10 Nov')).toBeInTheDocument();
+  vi.setSystemTime(new Date('2026-11-17T08:00:00Z'));
+  document.dispatchEvent(new Event('visibilitychange'));
+  await new Promise((r) => setTimeout(r, 50));
+  expect(screen.getByText('Tue 10 Nov')).toBeInTheDocument();
+});
+test('a screen that crashes shows a way out instead of a blank page', async () => {
+  const m = await createMeal('2026-11-16');
+  await db.logEntries.put({ id: 'broken', createdAt: 'x', updatedAt: 'x', mealId: m.id } as never); // as a bad record would
+  const quiet = vi.spyOn(console, 'error').mockImplementation(() => {});
+  renderAt('#/day/2026-11-16');
+  expect(await screen.findByText('Something went wrong')).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'Open Settings' })).toHaveAttribute('href', '#/settings');
+  quiet.mockRestore();
 });

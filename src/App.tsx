@@ -1,4 +1,5 @@
-import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { ErrorBoundary } from './ui/components/ErrorBoundary';
 import { localDate } from './domain/dates';
 import { AddFoodScreen } from './ui/screens/AddFoodScreen';
 import { AmountScreen } from './ui/screens/AmountScreen';
@@ -17,9 +18,11 @@ function ToToday() {
   return <Navigate to={`/day/${localDate(new Date())}`} replace />;
 }
 
-export default function App() {
+/** One boundary per address: moving to another screen clears a failure. */
+function Screens() {
+  const location = useLocation();
   return (
-    <HashRouter>
+    <ErrorBoundary key={location.pathname}>
       <Routes>
         <Route path="/" element={<ToToday />} />
         <Route path="/day/:date" element={<TodayScreen />} />
@@ -36,6 +39,14 @@ export default function App() {
         <Route path="/settings" element={<SettingsScreen />} />
         <Route path="*" element={<ToToday />} />
       </Routes>
+    </ErrorBoundary>
+  );
+}
+
+export default function App() {
+  return (
+    <HashRouter>
+      <Screens />
     </HashRouter>
   );
 }

@@ -112,3 +112,29 @@ test('Today links to Settings and Recipes', async () => {
   await user.click(await screen.findByRole('link', { name: 'Recipes' }));
   expect(await screen.findByRole('heading', { name: 'Recipes' })).toBeInTheDocument();
 });
+test('when the phone refuses the share sheet, a second tap saves the prepared file', async () => {
+  let refuse = true;
+  const share = vi.fn(async (_data: ShareData) => {
+    if (refuse) throw new DOMException('too late after the tap', 'NotAllowedError');
+  });
+  Object.defineProperty(navigator, 'canShare', { value: () => true, configurable: true });
+  Object.defineProperty(navigator, 'share', { value: share, configurable: true });
+  renderAt('#/settings');
+  await user.click(await screen.findByRole('button', { name: 'Export backup' }));
+  const again = await screen.findByRole('button', { name: 'Save backup file' });
+  expect(await lastExportAt()).toBeUndefined(); // nothing saved yet, so the reminder stays on
+  refuse = false;
+  await user.click(again);
+  expect(await screen.findByText(/Backup saved/)).toBeInTheDocument();
+  expect(share).toHaveBeenCalledTimes(2);
+  expect(await lastExportAt()).toBeDefined();
+});
+test('from the Home Screen, a plain download is not counted as a backup', async () => {
+  vi.stubGlobal('matchMedia', () => ({ matches: true }));
+  vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: () => 'blob:backup', revokeObjectURL: () => {} }));
+  vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+  renderAt('#/settings');
+  await user.click(await screen.findByRole('button', { name: 'Export backup' }));
+  expect(await screen.findByText(/could not confirm/)).toBeInTheDocument();
+  expect(await lastExportAt()).toBeUndefined();
+});

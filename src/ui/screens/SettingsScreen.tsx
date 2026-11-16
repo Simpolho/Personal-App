@@ -8,7 +8,7 @@ import { exportFileName } from '../../domain/backup';
 import { formatDayLabel, localDate } from '../../domain/dates';
 import { parseAmount } from '../../domain/nutrients';
 import { TARGET_KEYS, type TargetKey, type TargetValues } from '../../domain/targets';
-import { readText, shareOrDownload } from '../../pwa/saveFile';
+import { canShareFile, downloadFile, readText, shareFile } from '../../pwa/saveFile';
 import { isStandalone, requestPersistence, storageStatus } from '../../pwa/storage';
 import { Field, Screen } from '../components/ui';
 import { formatNumber } from '../format';
@@ -74,21 +74,53 @@ function BackupSection() {
   const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
+  const [pending, setPending] = useState<{ file: File; exportedAt: string } | null>(null);
+
+  // The share sheet may only open right after a tap. Building the file takes a moment, so if
+  // the phone refuses, the file is kept and a second button shares it straight from its tap.
+  async function finish(file: File, exportedAt: string, outcome: 'shared' | 'cancelled' | 'blocked') {
+    if (outcome === 'shared') {
+      await setLastExportAt(exportedAt);
+      setPending(null);
+      setNote({ ok: true, text: 'Backup saved. Keep the file somewhere safe, like Files or iCloud Drive.' });
+    } else if (outcome === 'cancelled') {
+      setPending(null);
+      setNote({ ok: false, text: 'Export cancelled. No backup was saved.' });
+    } else if (pending) {
+      // Refused twice: fall back to a download, which cannot be confirmed.
+      downloadFile(file);
+      setPending(null);
+      setNote({ ok: false, text: 'The file was sent as a download, but the app could not confirm it was saved. Check Files, and export again if it is not there.' });
+    } else {
+      setPending({ file, exportedAt });
+      setNote({ ok: false, text: 'The backup is ready. Tap “Save backup file” to choose where to keep it.' });
+    }
+  }
+
   async function exportBackup() {
     if (busy) return;
     setBusy(true);
     setNote(null);
+    setPending(null);
+    const before = (await db.settings.get('settings'))?.lastExportAt;
     try {
-      const before = (await db.settings.get('settings'))?.lastExportAt;
-      const file = new File([JSON.stringify(await exportAll())], exportFileName(new Date()), { type: 'application/json' });
-      const outcome = await shareOrDownload(file);
-      if (outcome === 'cancelled') {
-        await setLastExportAt(before); // a cancelled export is not a backup
-        setNote({ ok: false, text: 'Export cancelled. No backup was saved.' });
+      const data = await exportAll();
+      const file = new File([JSON.stringify(data)], exportFileName(new Date()), { type: 'application/json' });
+      // exportAll stamps the backup time so the file carries it; here it only counts once the file is known to be saved.
+      await setLastExportAt(before);
+      if (canShareFile(file)) {
+        await finish(file, data.exportedAt, await shareFile(file));
       } else {
-        setNote({ ok: true, text: outcome === 'shared' ? 'Backup saved. Keep the file somewhere safe, like Files or iCloud Drive.' : 'Backup saved to your downloads.' });
+        downloadFile(file);
+        if (isStandalone()) {
+          setNote({ ok: false, text: 'The file was sent as a download, but the app could not confirm it was saved. Check Files, and export again if it is not there.' });
+        } else {
+          await setLastExportAt(data.exportedAt);
+          setNote({ ok: true, text: 'Backup saved to your downloads.' });
+        }
       }
     } catch {
+      await setLastExportAt(before).catch(() => {});
       setNote({ ok: false, text: 'Export failed. Nothing was saved.' });
     } finally {
       setBusy(false);
@@ -125,6 +157,15 @@ function BackupSection() {
         <button type="button" className={`${btnPrimary} w-full`} disabled={busy} onClick={() => void exportBackup()}>
           Export backup
         </button>
+        {pending && (
+          <button
+            type="button"
+            className={`${btnPrimary} w-full`}
+            onClick={() => void shareFile(pending.file).then((outcome) => finish(pending.file, pending.exportedAt, outcome))}
+          >
+            Save backup file
+          </button>
+        )}
         <label className={`${btnSecondary} w-full cursor-pointer`}>
           Import backup
           <input type="file" accept=".json,application/json" className="sr-only" onChange={(e) => void importBackup(e)} />

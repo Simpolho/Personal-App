@@ -53,6 +53,38 @@ export async function exportAll(): Promise<ExportFile> {
 
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 
+const isString = (v: unknown): v is string => typeof v === 'string';
+const isNumber = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+const isNutrients = (v: unknown) => isObject(v) && Object.values(v).every((x) => x === undefined || isNumber(x));
+const isListOf = (v: unknown, check: (item: Record<string, unknown>) => boolean) =>
+  Array.isArray(v) && v.every((item) => isObject(item) && check(item));
+
+/** What each kind of record must contain for the screens to be able to show it. */
+const SHAPES: Record<RecordTable, (r: Record<string, unknown>) => boolean> = {
+  foods: (r) =>
+    isString(r.name) &&
+    (r.basis === '100g' || r.basis === '100ml') &&
+    isNutrients(r.nutrients) &&
+    isListOf(r.servings, (s) => isString(s.label) && isNumber(s.grams)),
+  foodUsage: (r) =>
+    isString(r.foodRef) && isNumber(r.lastAmount) && isString(r.lastUnit) && isString(r.lastUsedAt) && typeof r.favourite === 'boolean',
+  recipes: (r) => isString(r.name) && isNumber(r.servings) && r.servings > 0 && isListOf(r.items, (i) => isString(i.foodRef) && isNumber(i.grams)),
+  meals: (r) => isString(r.date) && isString(r.name) && isString(r.time),
+  mealTemplates: (r) =>
+    isString(r.name) &&
+    isListOf(r.items, (i) =>
+      i.kind === 'food'
+        ? isString(i.foodRef) && isNumber(i.amount) && isString(i.unit)
+        : i.kind === 'recipe'
+          ? isString(i.recipeRef) && isNumber(i.amount)
+          : i.kind === 'quick' && isString(i.name) && isNutrients(i.nutrients),
+    ),
+  days: (r) => isString(r.date) && typeof r.complete === 'boolean',
+  logEntries: (r) => isString(r.mealId) && isString(r.nameSnapshot) && isNumber(r.amount) && isString(r.unit) && isNutrients(r.nutrientsSnapshot),
+  targets: (r) => isString(r.effectiveFrom) && ['kcal', 'protein', 'carbs', 'fat'].every((k) => r[k] === undefined || isNumber(r[k])),
+  settings: (r) => r.lastExportAt === undefined || isString(r.lastExportAt),
+};
+
 function readRecords(file: unknown): Record<RecordTable, BaseRecord[]> {
   if (!isObject(file) || file.format !== EXPORT_FORMAT || typeof file.version !== 'number') {
     throw new ImportError('Not a backup file from this app');
@@ -64,7 +96,15 @@ function readRecords(file: unknown): Record<RecordTable, BaseRecord[]> {
     const list = file.records[table] ?? [];
     if (!Array.isArray(list)) throw new ImportError('This backup file is damaged');
     for (const record of list) {
-      if (!isObject(record) || typeof record.id !== 'string' || record.id === '' || typeof record.updatedAt !== 'string') {
+      if (
+        !isObject(record) ||
+        !isString(record.id) ||
+        record.id === '' ||
+        !isString(record.updatedAt) ||
+        !isString(record.createdAt) ||
+        (record.deletedAt !== undefined && !isString(record.deletedAt)) ||
+        !SHAPES[table](record)
+      ) {
         throw new ImportError('This backup file is damaged');
       }
     }

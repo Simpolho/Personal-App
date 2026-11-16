@@ -70,3 +70,18 @@ test('exportAll stamps the last export; a cancelled export can put the old stamp
   await setLastExportAt(undefined);
   expect((await db.settings.get('settings'))?.lastExportAt).toBeUndefined();
 });
+test('records with missing or wrong fields are refused, so a bad file cannot break the app', async () => {
+  const base = { id: 'x', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' };
+  const file = (records: object) => ({ format: 'fitness-app-export', version: 1, exportedAt: '', records });
+  const bad = [
+    { logEntries: [{ ...base, mealId: 'm', nameSnapshot: 'A', amount: 1, unit: 'g' }] }, // no nutrientsSnapshot
+    { logEntries: [{ ...base, mealId: 'm', nameSnapshot: 'A', amount: 1, unit: 'g', nutrientsSnapshot: { kcal: 'lots' } }] },
+    { foods: [{ ...base, basis: '100g', nutrients: {}, servings: [] }] }, // no name
+    { foods: [{ ...base, name: 'A', basis: 'cup', nutrients: {}, servings: [] }] },
+    { meals: [{ ...base, name: 'Lunch', time: '12:00' }] }, // no date
+    { recipes: [{ ...base, name: 'R', items: 'none', servings: 2 }] },
+    { days: [{ ...base, date: '2026-01-01', complete: 'yes' }] },
+  ];
+  for (const records of bad) await expect(importAll(file(records))).rejects.toBeInstanceOf(ImportError);
+  expect(await db.logEntries.count() + await db.foods.count() + await db.meals.count()).toBe(0);
+});

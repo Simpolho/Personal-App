@@ -1,4 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
+import { useEffect, useRef } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { db } from '../../db/db';
 import { firstEntryAt, getDay, setDayComplete } from '../../db/log';
@@ -21,9 +22,30 @@ export function TodayScreen() {
   const targets = useLiveQuery(() => (valid ? getTargetsFor(date) : null), [date, valid]) ?? null;
   const reminder =
     useLiveQuery(async () => {
-      const settings = await db.settings.get('settings');
-      return backupDue(settings?.lastExportAt, await firstEntryAt(), new Date());
+      const lastExportAt = (await db.settings.get('settings'))?.lastExportAt;
+      // Only look for the first entry (a scan of the whole log) while there has never been a backup.
+      return backupDue(lastExportAt, lastExportAt ? undefined : await firstEntryAt(), new Date());
     }, []) ?? false;
+
+  // iOS keeps a Home Screen app suspended for days. If it was showing "today" when it was put
+  // away and the date has changed since, show the new day, so food is not logged on yesterday.
+  const todayWhenSeen = useRef(localDate(new Date()));
+  useEffect(() => {
+    todayWhenSeen.current = localDate(new Date());
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      const now = localDate(new Date());
+      const wasOnToday = date === todayWhenSeen.current;
+      todayWhenSeen.current = now;
+      if (wasOnToday && date !== now) navigate(`/day/${now}`, { replace: true });
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('pageshow', onVisible);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('pageshow', onVisible);
+    };
+  }, [date, navigate]);
 
   if (!valid) return <Navigate to="/" replace />;
 

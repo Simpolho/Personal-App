@@ -29,3 +29,17 @@ test('when no table file can be fetched, nothing is marked as loaded so the next
   expect(await db.meta.get('tablesVersion')).toBeUndefined();
   expect(await ensureTablesLoaded(fakeFetch)).toBe('loaded');
 });
+test('if one table file fails to download, what arrived is usable and the rest is fetched next launch', async () => {
+  const usda: TableFile = { version: '2026-11', source: 'usda', foods: [['usda:1', 'Oats', '100g', [379, null, null, null, null, null, null, null], []]] };
+  const flaky = (async (url: string) => {
+    if (url.endsWith('usda.json')) throw new TypeError('network');
+    return new Response(JSON.stringify(file));
+  }) as typeof fetch;
+  await ensureTablesLoaded(flaky);
+  expect(await db.tableFoods.count()).toBe(1);
+  expect(await db.meta.get('tablesVersion')).toBeUndefined();
+  const working = (async (url: string) => new Response(JSON.stringify(url.endsWith('usda.json') ? usda : file))) as typeof fetch;
+  expect(await ensureTablesLoaded(working)).toBe('loaded');
+  expect(await db.tableFoods.count()).toBe(2);
+  expect(await ensureTablesLoaded(working)).toBe('already');
+});

@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "TZ=Europe/Lisbon vitest run"
+    "test": "TZ=Europe/Lisbon vitest run",
+    "tables": "tsx scripts/build-food-tables.ts"
   },
   "dependencies": {
     "dexie": "^4.4.7",

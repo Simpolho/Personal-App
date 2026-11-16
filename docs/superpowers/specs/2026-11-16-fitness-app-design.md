@@ -166,5 +166,5 @@ Component structure, styling details, exact search scoring, file layout, and the
 ## Risks
 
 - Deleting the Home Screen icon or clearing Safari data erases everything; the backup reminder and export are the safety net.
-- INSA terms of use need checking before bundling its table.
+- INSA terms of use, checked 2026-11-16: the spreadsheet's own "Informação adicional" sheet says that downloading it means accepting the conditions of use under copyright law, and that the source must be shown visibly wherever the data is used. There is no open licence; redistribution is neither granted nor forbidden. Decision (user): bundle the table and show the source in Settings, worded as the file asks: "Fonte: Base de Dados da Composição de Alimentos. Instituto Nacional de Saúde Doutor Ricardo Jorge, I. P.- INSA. v 7.1 - 2026". Bundling puts `insa.json` on the app's public URL. Contact if permission is ever wanted in writing: tabela.alimentos@insa.min-saude.pt.
 - Open Food Facts values can be wrong; step 2's review screen handles that.

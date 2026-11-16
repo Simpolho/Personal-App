@@ -69,6 +69,12 @@ export function AddFoodScreen() {
         </div>
       )}
 
+      {!searching && tab === 'recipes' && (
+        <Link to="/recipes" className="block px-1 text-sm font-medium text-emerald-700">
+          Manage recipes
+        </Link>
+      )}
+
       {results && results.length === 0 && (
         <p className="px-1 text-zinc-500">
           {searching ? 'No foods found. Try another word, or add it with “New food”.' : TABS.find((t) => t.id === tab)?.empty}

@@ -8,7 +8,7 @@ import { addDays, formatDayLabel, localDate } from '../../domain/dates';
 import { formatNutrient } from '../../domain/nutrients';
 import { TotalsCard } from '../components/TotalsCard';
 import { describeAmount } from '../format';
-import { btnPrimary, card } from '../styles';
+import { btnPrimary, btnSecondary, card } from '../styles';
 
 const arrow = 'flex size-11 items-center justify-center rounded-full text-2xl text-emerald-700 active:bg-zinc-100';
 
@@ -102,6 +102,15 @@ export function TodayScreen() {
           />
           Day complete
         </label>
+
+        <nav className="grid grid-cols-2 gap-2">
+          <Link to="/recipes" className={btnSecondary}>
+            Recipes
+          </Link>
+          <Link to="/settings" className={btnSecondary}>
+            Settings
+          </Link>
+        </nav>
       </main>
 
       <div className="fixed inset-x-0 bottom-0 z-10 mx-auto max-w-md border-t border-zinc-200 bg-white/95 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] backdrop-blur">

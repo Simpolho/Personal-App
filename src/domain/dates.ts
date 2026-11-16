@@ -28,7 +28,18 @@ export function formatDayLabel(date: string): string {
   return `${WEEKDAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
 }
 
-/** Timestamp for createdAt / updatedAt: ISO 8601, UTC. */
+let lastStamp = 0;
+
+/**
+ * Timestamp for createdAt / updatedAt: ISO 8601, UTC.
+ *
+ * Strictly increasing within a session: records made in the same millisecond (repeating a saved
+ * meal logs several entries at once) get stamps 1 ms apart, so sorting by createdAt keeps the
+ * order they were made in. If the clock is set back by a second or more, the clock wins.
+ */
 export function nowIso(): string {
-  return new Date().toISOString();
+  let t = Date.now();
+  if (t <= lastStamp && lastStamp - t < 1000) t = lastStamp + 1;
+  lastStamp = t;
+  return new Date(t).toISOString();
 }

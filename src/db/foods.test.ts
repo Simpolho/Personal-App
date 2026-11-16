@@ -55,7 +55,7 @@ test('deleteFood hides it from lists but keeps it resolvable', async () => {
   const f = await saveFood({ name: 'X', basis: '100g', nutrients: {}, servings: [] });
   await deleteFood(f.id);
   expect(await listFoods()).toEqual([]);
-  expect((await getFood(f.id))?.deletedAt).toBeDefined();
+  expect(await getFood(f.id)).toMatchObject({ deletedAt: expect.any(String) });
 });
 test('recordUsage and setFavourite upsert one usage record per food', async () => {
   await recordUsage('usda:173904', 80, 'g');

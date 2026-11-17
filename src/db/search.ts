@@ -15,14 +15,19 @@ export type SearchResult = {
   group: 0 | 1 | 2;
 };
 
-let tableCache: { generation: number; foods: Map<string, TableFood> } | null = null;
+let tableCache: { key: string; foods: Map<string, TableFood> } | null = null;
 
-/** The bundled tables, read from IndexedDB once and kept in memory until they are reloaded. */
+/**
+ * The bundled tables, read from IndexedDB once and kept in memory until they are reloaded.
+ * Reading the `tablesLoadedAt` marker on every call makes a live query depend on it, so a
+ * search typed while the tables are still loading re-runs by itself when they arrive.
+ */
 async function tableFoods(): Promise<Map<string, TableFood>> {
-  const generation = tablesGeneration();
-  if (!tableCache || tableCache.generation !== generation) {
+  const loadedAt = (await db.meta.get('tablesLoadedAt'))?.value ?? '';
+  const key = `${tablesGeneration()}|${loadedAt}`;
+  if (!tableCache || tableCache.key !== key) {
     const foods = await db.tableFoods.toArray();
-    tableCache = { generation, foods: new Map(foods.map((f) => [f.id, f])) };
+    tableCache = { key, foods: new Map(foods.map((f) => [f.id, f])) };
   }
   return tableCache.foods;
 }

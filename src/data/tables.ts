@@ -33,6 +33,8 @@ export async function ensureTablesLoaded(fetchFn: typeof fetch = fetch): Promise
     await db.tableFoods.clear();
     await db.tableFoods.bulkPut(foods);
     if (!failed) await db.meta.put({ key: 'tablesVersion', value: TABLES_VERSION });
+    // Searches on screen watch this marker and refresh when it changes.
+    await db.meta.put({ key: 'tablesLoadedAt', value: new Date().toISOString() });
   });
   bumpTablesGeneration();
   return 'loaded';

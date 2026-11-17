@@ -83,3 +83,9 @@ test('tap an entry to change its amount (comma decimals work) or delete it', asy
   await user.click(await screen.findByRole('button', { name: 'Delete entry' }));
   await waitFor(async () => expect((await getDay('2026-11-16')).meals[0].entries).toEqual([]));
 });
+test('Done takes you back to the day of the meal', async () => {
+  const m = await createMeal('2026-11-15');
+  renderAt(`#/meal/${m.id}`);
+  await user.click(await screen.findByRole('button', { name: 'Done' }));
+  expect(await screen.findByText('Sun 15 Nov')).toBeInTheDocument();
+});

@@ -16,7 +16,7 @@ import { formatNutrient, parseAmount } from '../../domain/nutrients';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Field, Screen } from '../components/ui';
 import { describeAmount, formatNumber, formatWhole } from '../format';
-import { btnDanger, btnPrimary, btnSecondary, card, errorText, input, row } from '../styles';
+import { btnDanger, btnDone, btnPrimary, btnSecondary, card, errorText, input, row } from '../styles';
 
 function unitLabel(unit: string): string {
   if (unit === 'g' || unit === 'ml') return unit;
@@ -109,8 +109,16 @@ export function MealScreen() {
   }
 
   return (
-    <Screen title={meal.name} back={dayPath}>
-      <div className="grid grid-cols-[1fr_auto] gap-3">
+    <Screen
+      title={meal.name}
+      back={dayPath}
+      footer={
+        <button type="button" className={`${btnDone} w-full`} onClick={() => navigate(dayPath)}>
+          Done
+        </button>
+      }
+    >
+      <div className="grid grid-cols-[minmax(0,1fr)_8.5rem] gap-3">
         <Field label="Meal name">
           <input
             key={meal.id}
@@ -129,7 +137,7 @@ export function MealScreen() {
           />
         </Field>
         <Field label="Time">
-          <input type="time" className={input} value={meal.time} onChange={(e) => void setMealTime(meal.id, e.target.value)} />
+          <input type="time" className={`${input} block min-w-0 appearance-none`} value={meal.time} onChange={(e) => void setMealTime(meal.id, e.target.value)} />
         </Field>
         <datalist id="past-meal-names">
           {pastNames.map((name) => (

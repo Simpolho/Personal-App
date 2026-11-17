@@ -42,7 +42,13 @@ function PortionForm({
       return;
     }
     setBusy(true);
-    await logRecipe(mealId, recipe.id, parsed);
+    try {
+      await logRecipe(mealId, recipe.id, parsed);
+    } catch {
+      setError('Could not save. Try again.');
+      setBusy(false);
+      return;
+    }
     navigate(`/meal/${mealId}`);
   }
 

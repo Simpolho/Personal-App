@@ -65,7 +65,11 @@ function FoodForm({ existing, template, mealId }: { existing: Food | null; templ
       if (row.label.trim() === '' && row.grams.trim() === '') continue;
       const grams = parseAmount(row.grams);
       if (row.label.trim() === '' || grams === null) return setError('Each serving needs a name and an amount');
-      cleanServings.push({ label: row.label.trim(), grams });
+      const label = row.label.trim();
+      // These words already mean something as units, so a serving with that name would be ambiguous.
+      if (['g', 'ml', 'portion', 'quick'].includes(label.toLowerCase())) return setError(`A serving cannot be called “${label}”`);
+      if (cleanServings.some((s) => s.label.toLowerCase() === label.toLowerCase())) return setError(`Two servings are called “${label}”`);
+      cleanServings.push({ label, grams });
     }
     setBusy(true);
     const saved = await saveFood({

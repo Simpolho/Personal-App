@@ -189,3 +189,40 @@ test('clearing the search box goes back to the Recent list', async () => {
   expect(await screen.findByText('Oats')).toBeInTheDocument();
   expect(screen.getByRole('tab', { name: 'Recent' })).toHaveAttribute('aria-selected', 'true');
 });
+test('if saving fails, the amount screen says so and Add works again', async () => {
+  const fail = vi.spyOn(db.logEntries, 'add').mockRejectedValueOnce(new Error('disk full'));
+  renderAt(`#/meal/${meal.id}/add/usda:173904`);
+  await screen.findByLabelText('Amount');
+  await user.click(screen.getByRole('button', { name: 'Add' }));
+  expect(await screen.findByText('Could not save. Try again.')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Add' })).toBeEnabled();
+  fail.mockRestore();
+  await user.click(screen.getByRole('button', { name: 'Add' }));
+  await waitFor(async () => expect(await entries()).toHaveLength(1));
+});
+test('if saving a quick add fails, it says so', async () => {
+  const fail = vi.spyOn(db.logEntries, 'add').mockRejectedValueOnce(new Error('disk full'));
+  renderAt(`#/meal/${meal.id}/quick`);
+  await user.type(await screen.findByLabelText('Calories (kcal)'), '300');
+  await user.click(screen.getByRole('button', { name: 'Add' }));
+  expect(await screen.findByText('Could not save. Try again.')).toBeInTheDocument();
+  fail.mockRestore();
+});
+test('a serving cannot be called g or ml, or share a name with another serving', async () => {
+  renderAt(`#/foods/new?meal=${meal.id}`);
+  await user.type(await screen.findByLabelText('Name'), 'Pão');
+  await user.type(screen.getByLabelText('Calories (kcal)'), '250');
+  await user.click(screen.getByRole('button', { name: 'Add serving' }));
+  await user.type(screen.getByLabelText('Serving 1 name'), 'g');
+  await user.type(screen.getByLabelText('Serving 1 amount'), '30');
+  await user.click(screen.getByRole('button', { name: 'Save' }));
+  expect(await screen.findByText('A serving cannot be called “g”')).toBeInTheDocument();
+  await user.clear(screen.getByLabelText('Serving 1 name'));
+  await user.type(screen.getByLabelText('Serving 1 name'), '1 fatia');
+  await user.click(screen.getByRole('button', { name: 'Add serving' }));
+  await user.type(screen.getByLabelText('Serving 2 name'), '1 Fatia ');
+  await user.type(screen.getByLabelText('Serving 2 amount'), '40');
+  await user.click(screen.getByRole('button', { name: 'Save' }));
+  expect(await screen.findByText('Two servings are called “1 Fatia”')).toBeInTheDocument();
+  expect(await listFoods()).toEqual([]);
+});

@@ -1,8 +1,8 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { db } from '../../db/db';
-import { firstEntryAt, getDay, setDayComplete } from '../../db/log';
+import { firstEntryAt, getDay, removeEmptyMeals, setDayComplete } from '../../db/log';
 import { getTargetsFor } from '../../db/targets';
 import { backupDue } from '../../domain/backup';
 import { addDays, formatDayLabel, localDate } from '../../domain/dates';
@@ -19,7 +19,7 @@ export function TodayScreen() {
   const valid = /^\d{4}-\d{2}-\d{2}$/.test(date);
 
   const day = useLiveQuery(() => (valid ? getDay(date) : undefined), [date, valid]);
-  const targets = useLiveQuery(() => (valid ? getTargetsFor(date) : null), [date, valid]) ?? null;
+  const targets = useLiveQuery(() => (valid ? getTargetsFor(date) : null), [date, valid]);
   const reminder =
     useLiveQuery(async () => {
       const lastExportAt = (await db.settings.get('settings'))?.lastExportAt;
@@ -27,25 +27,10 @@ export function TodayScreen() {
       return backupDue(lastExportAt, lastExportAt ? undefined : await firstEntryAt(), new Date());
     }, []) ?? false;
 
-  // iOS keeps a Home Screen app suspended for days. If it was showing "today" when it was put
-  // away and the date has changed since, show the new day, so food is not logged on yesterday.
-  const todayWhenSeen = useRef(localDate(new Date()));
+  // A meal left with nothing in it (New meal, then back) doesn't stay on the day.
   useEffect(() => {
-    todayWhenSeen.current = localDate(new Date());
-    const onVisible = () => {
-      if (document.visibilityState !== 'visible') return;
-      const now = localDate(new Date());
-      const wasOnToday = date === todayWhenSeen.current;
-      todayWhenSeen.current = now;
-      if (wasOnToday && date !== now) navigate(`/day/${now}`, { replace: true });
-    };
-    document.addEventListener('visibilitychange', onVisible);
-    window.addEventListener('pageshow', onVisible);
-    return () => {
-      document.removeEventListener('visibilitychange', onVisible);
-      window.removeEventListener('pageshow', onVisible);
-    };
-  }, [date, navigate]);
+    if (valid) void removeEmptyMeals(date);
+  }, [date, valid]);
 
   if (!valid) return <Navigate to="/" replace />;
 
@@ -80,9 +65,9 @@ export function TodayScreen() {
           </Link>
         )}
 
-        <TotalsCard totals={day?.totals ?? {}} targets={targets} />
+        <TotalsCard totals={day?.totals ?? {}} targets={targets ?? null} loading={day === undefined || targets === undefined} />
 
-        {meals.length === 0 ? (
+        {day === undefined ? null : meals.length === 0 ? (
           <p className="px-1 text-zinc-500">Nothing logged yet.</p>
         ) : (
           meals.map(({ meal, entries, totals }) => (

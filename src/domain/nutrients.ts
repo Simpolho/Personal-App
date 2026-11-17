@@ -64,7 +64,7 @@ export function formatNutrient(key: NutrientKey, value: number | undefined): str
 /** Parses a typed number, accepting a decimal comma ("80,5"). Returns null when invalid. */
 export function parseAmount(input: string, opts?: { allowZero?: boolean }): number | null {
   const text = input.trim().replace(',', '.');
-  if (!/^\d+(\.\d+)?$/.test(text)) return null;
+  if (!/^(\d+(\.\d+)?|\.\d+)$/.test(text)) return null;
   const value = Number(text);
   if (!Number.isFinite(value)) return null;
   if (value === 0 && !opts?.allowZero) return null;

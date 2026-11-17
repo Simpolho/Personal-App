@@ -179,6 +179,18 @@ export async function getDay(date: string): Promise<DayView> {
   };
 }
 
+/**
+ * Removes the day's meals that have nothing in them (e.g. "New meal", then back without adding
+ * a food), so they don't sit on the day as "Meal 2 · 0 kcal". Called when the day is shown.
+ */
+export async function removeEmptyMeals(date: string): Promise<void> {
+  await db.transaction('rw', db.meals, db.logEntries, async () => {
+    for (const meal of await liveMeals(date)) {
+      if ((await liveEntries(meal.id)).length === 0) await db.meals.put(softDeleted(meal));
+    }
+  });
+}
+
 export async function setDayComplete(date: string, complete: boolean): Promise<void> {
   const existing = await db.days.get(date);
   if (existing) {

@@ -60,7 +60,13 @@ function AmountForm({
       return;
     }
     setBusy(true);
-    await logFood(mealId, foodRef, parsed, unit);
+    try {
+      await logFood(mealId, foodRef, parsed, unit);
+    } catch {
+      setError('Could not save. Try again.');
+      setBusy(false);
+      return;
+    }
     navigate(`/meal/${mealId}`);
   }
 

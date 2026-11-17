@@ -11,6 +11,7 @@ import {
   nextMealName,
   pastMealNames,
   quickAdd,
+  removeEmptyMeals,
   renameMeal,
   setDayComplete,
   setMealTime,
@@ -141,4 +142,16 @@ test('pastMealNames suggests names used before, newest first, without "Meal N"',
   const c = await createMeal('2026-11-16');
   await renameMeal(c.id, 'Lunch');
   expect(await pastMealNames()).toEqual(['Lunch', 'Pre-workout']);
+});
+test('removeEmptyMeals drops meals with nothing in them, only on that day', async () => {
+  const empty = await createMeal('2026-11-16');
+  const full = await createMeal('2026-11-16');
+  await quickAdd(full.id, undefined, { kcal: 100 });
+  const emptied = await createMeal('2026-11-16');
+  await deleteEntry((await quickAdd(emptied.id, undefined, { kcal: 1 })).id);
+  const otherDay = await createMeal('2026-11-15');
+  await removeEmptyMeals('2026-11-16');
+  expect((await getDay('2026-11-16')).meals.map((m) => m.meal.id)).toEqual([full.id]);
+  expect((await getDay('2026-11-15')).meals.map((m) => m.meal.id)).toEqual([otherDay.id]);
+  expect((await db.meals.get(empty.id))?.deletedAt).toEqual(expect.any(String));
 });

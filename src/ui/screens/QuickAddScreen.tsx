@@ -44,8 +44,14 @@ function QuickForm({ mealId, entry }: { mealId: string; entry: LogEntry | null }
       return;
     }
     setBusy(true);
-    if (entry) await updateQuickAdd(entry.id, name, nutrients);
-    else await quickAdd(mealId, name, nutrients);
+    try {
+      if (entry) await updateQuickAdd(entry.id, name, nutrients);
+      else await quickAdd(mealId, name, nutrients);
+    } catch {
+      setError('Could not save. Try again.');
+      setBusy(false);
+      return;
+    }
     navigate(`/meal/${mealId}`);
   }
 

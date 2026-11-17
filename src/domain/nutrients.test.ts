@@ -46,3 +46,8 @@ test('amountInBase converts servings to grams', () => {
   expect(amountInBase(1.5, '1 medium', '100g', servings)).toBe(177);
   expect(() => amountInBase(1, 'slice', '100g', servings)).toThrow();
 });
+test('parseAmount accepts a leading decimal point or comma', () => {
+  expect(parseAmount(',5')).toBe(0.5);
+  expect(parseAmount('.5')).toBe(0.5);
+  for (const bad of [',', '.', '5,', '5.']) expect(parseAmount(bad)).toBeNull();
+});

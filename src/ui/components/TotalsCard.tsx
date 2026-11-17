@@ -29,11 +29,11 @@ function Bar({ label, value, max }: { label: string; value: number; max: number 
 }
 
 /** The day's calories and macros. Bars and "x / y" appear only for the targets that are set. */
-export function TotalsCard({ totals, targets }: { totals: Nutrients; targets: TargetValues | null }) {
+export function TotalsCard({ totals, targets, loading = false }: { totals: Nutrients; targets: TargetValues | null; loading?: boolean }) {
   const kcal = totals.kcal ?? 0;
   const kcalTarget = targets?.kcal;
   return (
-    <section aria-label="Totals" className={`${card} space-y-3 p-4`}>
+    <section aria-label="Totals" aria-busy={loading} className={`${card} space-y-3 p-4`}>
       <div className="space-y-2">
         <p className="text-2xl font-semibold tabular-nums">
           {kcalTarget !== undefined

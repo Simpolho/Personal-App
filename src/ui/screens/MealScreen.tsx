@@ -28,6 +28,7 @@ function unitLabel(unit: string): string {
 function EntryEditor({ entry, mealId, onDone }: { entry: LogEntry; mealId: string; onDone: () => void }) {
   const [value, setValue] = useState(formatNumber(entry.amount));
   const [error, setError] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const isQuick = entry.unit === 'quick';
 
   async function save() {
@@ -36,7 +37,12 @@ function EntryEditor({ entry, mealId, onDone }: { entry: LogEntry; mealId: strin
       setError('Enter an amount');
       return;
     }
-    await updateEntryAmount(entry.id, amount, entry.unit);
+    try {
+      await updateEntryAmount(entry.id, amount, entry.unit);
+    } catch {
+      setError('Could not save. Try again.');
+      return;
+    }
     onDone();
   }
 
@@ -74,14 +80,23 @@ function EntryEditor({ entry, mealId, onDone }: { entry: LogEntry; mealId: strin
         <button
           type="button"
           className={btnDanger}
-          onClick={() => {
-            void deleteEntry(entry.id);
-            onDone();
-          }}
+          onClick={() => setConfirmDelete(true)}
         >
           Delete entry
         </button>
       </div>
+      {confirmDelete && (
+        <ConfirmDialog
+          title={`Delete “${entry.nameSnapshot}”?`}
+          confirmLabel="Delete"
+          onCancel={() => setConfirmDelete(false)}
+          onConfirm={() => {
+            void deleteEntry(entry.id);
+            setConfirmDelete(false);
+            onDone();
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -81,6 +81,8 @@ test('tap an entry to change its amount (comma decimals work) or delete it', asy
   });
   await user.click(await screen.findByText('Oats'));
   await user.click(await screen.findByRole('button', { name: 'Delete entry' }));
+  expect((await getDay('2026-11-16')).meals[0].entries).toHaveLength(1); // asks first
+  await user.click(await screen.findByRole('button', { name: 'Delete' }));
   await waitFor(async () => expect((await getDay('2026-11-16')).meals[0].entries).toEqual([]));
 });
 test('Done takes you back to the day of the meal', async () => {
@@ -88,4 +90,46 @@ test('Done takes you back to the day of the meal', async () => {
   renderAt(`#/meal/${m.id}`);
   await user.click(await screen.findByRole('button', { name: 'Done' }));
   expect(await screen.findByText('Sun 15 Nov')).toBeInTheDocument();
+});
+test('cancelling an entry delete keeps it', async () => {
+  const m = await createMeal('2026-11-16');
+  await logFood(m.id, 'usda:173904', 80, 'g');
+  renderAt(`#/meal/${m.id}`);
+  await user.click(await screen.findByText('Oats'));
+  await user.click(await screen.findByRole('button', { name: 'Delete entry' }));
+  expect(await screen.findByRole('dialog', { name: 'Delete “Oats”?' })).toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: 'Cancel' }));
+  expect(screen.queryByRole('dialog')).toBeNull();
+  expect((await getDay('2026-11-16')).meals[0].entries).toHaveLength(1);
+});
+test('a new meal left without adding anything does not stay on the day', async () => {
+  renderAt('#/day/2026-11-16');
+  await user.click(await screen.findByRole('button', { name: 'Log food' }));
+  await user.click(screen.getByRole('button', { name: 'New meal' }));
+  await screen.findByPlaceholderText('Search foods');
+  await user.click(screen.getByRole('link', { name: 'Back' }));
+  await user.click(await screen.findByRole('button', { name: 'Done' }));
+  expect(await screen.findByText('Mon 16 Nov')).toBeInTheDocument();
+  await waitFor(async () => expect((await getDay('2026-11-16')).meals).toEqual([]));
+  await waitFor(() => expect(screen.queryByText(/^Meal 1/)).toBeNull());
+  expect(await screen.findByText('Nothing logged yet.')).toBeInTheDocument();
+});
+test('a meal screen of today, reopened the next morning, moves to the new day', async () => {
+  vi.setSystemTime(new Date('2026-11-16T22:00:00Z'));
+  const m = await createMeal('2026-11-16');
+  await quickAdd(m.id, undefined, { kcal: 300 });
+  renderAt(`#/meal/${m.id}`);
+  await screen.findByRole('button', { name: 'Done' });
+  vi.setSystemTime(new Date('2026-11-17T08:00:00Z'));
+  document.dispatchEvent(new Event('visibilitychange'));
+  expect(await screen.findByText('Tue 17 Nov')).toBeInTheDocument();
+});
+test('a meal screen of an earlier day stays put when the app is reopened', async () => {
+  const m = await createMeal('2026-11-10');
+  renderAt(`#/meal/${m.id}`);
+  await screen.findByRole('button', { name: 'Done' });
+  vi.setSystemTime(new Date('2026-11-17T08:00:00Z'));
+  document.dispatchEvent(new Event('visibilitychange'));
+  await new Promise((r) => setTimeout(r, 50));
+  expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
 });

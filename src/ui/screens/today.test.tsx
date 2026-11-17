@@ -14,6 +14,8 @@ test('first launch: empty day, totals only, no bars', async () => {
   renderAt('#/day/2026-11-16');
   expect(await screen.findByText('Mon 16 Nov')).toBeInTheDocument();
   expect(screen.getByText('0 kcal')).toBeInTheDocument();
+  // Wait until the targets have been read, so "no bars" is checked after they could have appeared.
+  await waitFor(() => expect(screen.getByRole('region', { name: 'Totals' })).toHaveAttribute('aria-busy', 'false'));
   expect(screen.queryByRole('progressbar')).toBeNull();
   expect(screen.getByRole('button', { name: 'Log food' })).toBeInTheDocument();
 });
@@ -42,6 +44,7 @@ test('Log food → New meal creates "Meal 1" and opens food search', async () =>
 });
 test('Log food offers the day\'s meals, and picking one opens it for adding', async () => {
   const m = await createMeal('2026-11-16');
+  await quickAdd(m.id, undefined, { kcal: 300 }); // an empty meal would be removed when the day is shown
   renderAt('#/day/2026-11-16');
   await user.click(await screen.findByRole('button', { name: 'Log food' }));
   await user.click(await screen.findByRole('button', { name: 'Meal 1 · 10:00' }));
@@ -99,4 +102,14 @@ test('a screen that crashes shows a way out instead of a blank page', async () =
   expect(await screen.findByText('Something went wrong')).toBeInTheDocument();
   expect(screen.getByRole('link', { name: 'Open Settings' })).toHaveAttribute('href', '#/settings');
   quiet.mockRestore();
+});
+test('at 00:30 the app opens on the new date and a meal logged then belongs to it', async () => {
+  vi.setSystemTime(new Date('2026-07-01T23:30:00Z')); // 00:30 on 2 July in Lisbon (summer time)
+  renderAt('#/');
+  expect(await screen.findByText('Thu 2 Jul')).toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: 'Log food' }));
+  await user.click(screen.getByRole('button', { name: 'New meal' }));
+  await screen.findByPlaceholderText('Search foods');
+  const day = await getDay('2026-07-02');
+  expect(day.meals.map((x) => [x.meal.date, x.meal.time])).toEqual([['2026-07-02', '00:30']]);
 });

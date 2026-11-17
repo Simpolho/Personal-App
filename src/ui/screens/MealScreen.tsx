@@ -137,7 +137,22 @@ export function MealScreen() {
           />
         </Field>
         <Field label="Time">
-          <input type="time" className={`${input} block min-w-0 appearance-none`} value={meal.time} onChange={(e) => void setMealTime(meal.id, e.target.value)} />
+          {/*
+            iPhone Safari draws the time inside a native box it won't centre. The time shown is
+            ours; the real time input lies invisibly on top, so a tap still opens the picker.
+          */}
+          <div className="relative rounded-xl focus-within:ring-2 focus-within:ring-emerald-600">
+            <div aria-hidden="true" className={`${input} flex items-center justify-center tabular-nums`}>
+              {meal.time}
+            </div>
+            <input
+              type="time"
+              aria-label="Time"
+              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+              value={meal.time}
+              onChange={(e) => void setMealTime(meal.id, e.target.value)}
+            />
+          </div>
         </Field>
         <datalist id="past-meal-names">
           {pastNames.map((name) => (

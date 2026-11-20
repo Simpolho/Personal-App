@@ -3,6 +3,7 @@ import { db, resetDb } from './db';
 import {
   deleteFood,
   duplicateFood,
+  findFoodByBarcode,
   getFood,
   getUsage,
   isTableRef,
@@ -63,4 +64,14 @@ test('recordUsage and setFavourite upsert one usage record per food', async () =
   await setFavourite('usda:173904', true);
   expect(await getUsage('usda:173904')).toMatchObject({ id: 'usda:173904', lastAmount: 60, lastUnit: 'g', favourite: true });
   expect(await db.foodUsage.count()).toBe(1);
+});
+test('findFoodByBarcode finds the live food, the most recently changed one, in any barcode form', async () => {
+  const old = await saveFood({ name: 'Old', barcode: '0049000050103', basis: '100g', nutrients: {}, servings: [] });
+  vi.setSystemTime(new Date(Date.now() + 1000));
+  const newer = await saveFood({ name: 'Newer', barcode: '0049000050103', basis: '100g', nutrients: {}, servings: [] });
+  expect((await findFoodByBarcode('049000050103'))?.id).toBe(newer.id);
+  await deleteFood(newer.id);
+  expect((await findFoodByBarcode('0049000050103'))?.id).toBe(old.id);
+  expect(await findFoodByBarcode('3017624010701')).toBeUndefined();
+  expect(await findFoodByBarcode('not a code')).toBeUndefined();
 });

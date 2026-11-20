@@ -1,3 +1,4 @@
+import { normalizeBarcode } from '../domain/barcode';
 import { nowIso } from '../domain/dates';
 import { NUTRIENT_KEYS, type Nutrients, type Serving } from '../domain/nutrients';
 import { db } from './db';
@@ -11,6 +12,14 @@ export function isTableRef(ref: string): boolean {
 /** Resolves a table food or a saved food. Deleted foods are returned too, so old entries can show them. */
 export async function getFood(ref: string): Promise<FoodLike | undefined> {
   return isTableRef(ref) ? db.tableFoods.get(ref) : db.foods.get(ref);
+}
+
+/** The saved food with this barcode (in any form it was read in); the most recently changed if several. */
+export async function findFoodByBarcode(code: string): Promise<Food | undefined> {
+  const normalized = normalizeBarcode(code);
+  if (!normalized) return undefined;
+  const matches = (await db.foods.where('barcode').equals(normalized).toArray()).filter(isLive);
+  return matches.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
 }
 
 export async function listFoods(): Promise<Food[]> {

@@ -3,7 +3,7 @@ import { useEffect, useState, type ChangeEvent } from 'react';
 import { exportAll, importAll, ImportError, setLastExportAt } from '../../db/backup';
 import { db } from '../../db/db';
 import { getTargetsFor, setTargets } from '../../db/targets';
-import { INSA_SOURCE, USDA_SOURCE } from '../../data/credits';
+import { INSA_SOURCE, OFF_SOURCE, USDA_SOURCE } from '../../data/credits';
 import { exportFileName } from '../../domain/backup';
 import { formatDayLabel, localDate } from '../../domain/dates';
 import { parseAmount } from '../../domain/nutrients';
@@ -225,6 +225,7 @@ export function SettingsScreen() {
         <div className={`${card} space-y-2 p-4 text-sm text-zinc-600`}>
           <p>{INSA_SOURCE}</p>
           <p>{USDA_SOURCE}</p>
+          <p>{OFF_SOURCE}</p>
         </div>
       </section>
     </Screen>

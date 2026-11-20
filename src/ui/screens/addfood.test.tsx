@@ -6,6 +6,8 @@ import { createMeal, getDay, logFood, quickAdd } from '../../db/log';
 import { saveRecipe } from '../../db/recipes';
 import { setTargets } from '../../db/targets';
 import type { Meal, TableFood } from '../../db/types';
+import { offProductToDraft } from '../../data/openFoodFacts';
+import nutella from '../../data/fixtures/off-nutella.json';
 import { renderAt, user } from '../../test/render';
 
 const oats: TableFood = { id: 'usda:173904', name: 'Oats', source: 'usda', basis: '100g', nutrients: { kcal: 379, protein: 13.2 }, servings: [], searchKey: 'oats' };
@@ -225,4 +227,41 @@ test('a serving cannot be called g or ml, or share a name with another serving',
   await user.click(screen.getByRole('button', { name: 'Save' }));
   expect(await screen.findByText('Two servings are called “1 Fatia”')).toBeInTheDocument();
   expect(await listFoods()).toEqual([]);
+});
+test('a product from Open Food Facts is checked before it is saved', async () => {
+  const draft = offProductToDraft(nutella.product, '3017624010701');
+  renderAt(`#/foods/new?meal=${meal.id}&barcode=3017624010701`, { draft });
+  expect(await screen.findByRole('heading', { name: 'Check the label' })).toBeInTheDocument();
+  expect(screen.getByRole('note')).toHaveTextContent('From Open Food Facts');
+  expect(screen.getByLabelText('Name')).toHaveValue('Nutella');
+  expect(screen.getByLabelText('Brand (optional)')).toHaveValue('Ferrero');
+  expect(screen.getByLabelText('Calories (kcal)')).toHaveValue('539');
+  expect(screen.getByLabelText('Fibre (g)')).toHaveValue('');
+  expect(screen.getByText('Barcode 3017624010701')).toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: 'Save' }));
+  expect(await screen.findByLabelText('Amount')).toBeInTheDocument();
+  expect(await listFoods()).toEqual([
+    expect.objectContaining({ name: 'Nutella', source: 'off', barcode: '3017624010701', sourceId: '3017624010701' }),
+  ]);
+});
+test('backing out of the check saves nothing', async () => {
+  const draft = offProductToDraft(nutella.product, '3017624010701');
+  renderAt(`#/foods/new?meal=${meal.id}&barcode=3017624010701`, { draft });
+  await user.click(await screen.findByRole('link', { name: 'Back' }));
+  expect(await screen.findByPlaceholderText('Search foods')).toBeInTheDocument();
+  expect(await listFoods()).toEqual([]);
+});
+test('a barcode not in Open Food Facts opens New food with the barcode attached', async () => {
+  renderAt(`#/foods/new?meal=${meal.id}&barcode=3017624010701&reason=not-found`);
+  expect(await screen.findByRole('heading', { name: 'New food' })).toBeInTheDocument();
+  expect(screen.getByRole('note')).toHaveTextContent("isn't in Open Food Facts");
+  await user.type(screen.getByLabelText('Name'), 'Creme de avelã');
+  await user.type(screen.getByLabelText('Calories (kcal)'), '540');
+  await user.click(screen.getByRole('button', { name: 'Save' }));
+  await waitFor(async () => expect(await listFoods()).toHaveLength(1));
+  expect((await listFoods())[0]).toMatchObject({ barcode: '3017624010701', source: 'custom' });
+});
+test('a barcode that could not be looked up says so', async () => {
+  renderAt(`#/foods/new?meal=${meal.id}&barcode=3017624010701&reason=offline`);
+  expect(await screen.findByRole('note')).toHaveTextContent("couldn't be looked up");
 });

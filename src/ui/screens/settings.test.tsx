@@ -138,3 +138,7 @@ test('from the Home Screen, a plain download is not counted as a backup', async 
   expect(await screen.findByText(/could not confirm/)).toBeInTheDocument();
   expect(await lastExportAt()).toBeUndefined();
 });
+test('Open Food Facts is credited', async () => {
+  renderAt('#/settings');
+  expect(await screen.findByText(/Open Food Facts.*ODbL/)).toBeInTheDocument();
+});

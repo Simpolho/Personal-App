@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import type { FoodDraft } from '../../data/openFoodFacts';
 import { db } from '../../db/db';
 import { deleteFood, getFood, saveFood } from '../../db/foods';
 import type { Food, FoodLike } from '../../db/types';
+import { normalizeBarcode } from '../../domain/barcode';
 import { NUTRIENT_KEYS, parseAmount, type Basis, type NutrientKey, type Nutrients, type Serving } from '../../domain/nutrients';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Field, Screen } from '../components/ui';
@@ -12,14 +14,41 @@ import { btnDanger, btnPrimary, btnSecondary, card, errorText, input } from '../
 
 type ServingRow = { label: string; grams: string };
 
+/** Why New food was opened from a scan without a product to check. */
+type ScanReason = 'not-found' | 'offline' | 'error';
+
+const NOTES: Record<'draft' | ScanReason, string> = {
+  draft: 'From Open Food Facts. Anyone can edit it, so check the values against the package.',
+  'not-found': "This barcode isn't in Open Food Facts. Type the label in once and the next scan will find it.",
+  offline: "This barcode couldn't be looked up right now. Type the label in, or scan it again later.",
+  error: "This barcode couldn't be looked up right now. Type the label in, or scan it again later.",
+};
+
 /**
  * Manual add and edit. `existing` is the saved food being edited; `template` pre-fills a new
- * food from another one ("Duplicate to edit" on a read-only table food). Nothing is saved
+ * food from another one ("Duplicate to edit" on a read-only table food); `draft` pre-fills it
+ * from Open Food Facts for checking. `barcode` and `reason` come from a scan. Nothing is saved
  * until Save.
  */
-function FoodForm({ existing, template, mealId }: { existing: Food | null; template: FoodLike | null; mealId: string | null }) {
+function FoodForm({
+  existing,
+  template,
+  draft,
+  barcode,
+  reason,
+  mealId,
+}: {
+  existing: Food | null;
+  template: FoodLike | null;
+  draft: FoodDraft | null;
+  barcode: string | null;
+  reason: ScanReason | null;
+  mealId: string | null;
+}) {
   const navigate = useNavigate();
-  const source = existing ?? template;
+  const source = existing ?? template ?? draft;
+  const knownBarcode = existing?.barcode ?? draft?.barcode ?? barcode ?? undefined;
+  const note = draft ? NOTES.draft : reason ? NOTES[reason] : null;
   const [name, setName] = useState(source?.name ?? '');
   const [brand, setBrand] = useState(source && 'brand' in source ? (source.brand ?? '') : '');
   const [basis, setBasis] = useState<Basis>(source?.basis ?? '100g');
@@ -74,9 +103,9 @@ function FoodForm({ existing, template, mealId }: { existing: Food | null; templ
     setBusy(true);
     const saved = await saveFood({
       id: existing?.id,
-      source: existing?.source,
-      barcode: existing?.barcode,
-      sourceId: existing?.sourceId,
+      source: existing?.source ?? (draft ? 'off' : undefined),
+      barcode: knownBarcode,
+      sourceId: existing?.sourceId ?? draft?.sourceId,
       name,
       brand,
       basis,
@@ -88,13 +117,19 @@ function FoodForm({ existing, template, mealId }: { existing: Food | null; templ
   }
 
   return (
-    <Screen title={existing ? 'Edit food' : 'New food'} back={back}>
+    <Screen title={draft ? 'Check the label' : existing ? 'Edit food' : 'New food'} back={back}>
+      {note && (
+        <p role="note" className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900 ring-1 ring-amber-200">
+          {note}
+        </p>
+      )}
       <Field label="Name">
         <input className={input} value={name} onChange={(e) => { setName(e.target.value); setError(''); }} />
       </Field>
       <Field label="Brand (optional)">
         <input className={input} value={brand} onChange={(e) => setBrand(e.target.value)} />
       </Field>
+      {knownBarcode && <p className="px-1 text-sm tabular-nums text-zinc-500">{`Barcode ${knownBarcode}`}</p>}
 
       <fieldset className={`${card} p-4`}>
         <legend className="sr-only">Values are</legend>
@@ -189,9 +224,14 @@ export function FoodEditorScreen() {
   const [params] = useSearchParams();
   const mealId = params.get('meal');
   const from = params.get('from');
+  const barcode = normalizeBarcode(params.get('barcode') ?? '');
+  const reasonParam = params.get('reason');
+  const reason = reasonParam === 'not-found' || reasonParam === 'offline' || reasonParam === 'error' ? reasonParam : null;
+  const state = useLocation().state as { draft?: FoodDraft } | null;
+  const draft = id === 'new' && state?.draft ? state.draft : null;
 
   const [loaded, setLoaded] = useState<{ key: string; existing: Food | null; template: FoodLike | null } | null>(null);
-  const key = `${id}|${from ?? ''}`;
+  const key = `${id}|${from ?? ''}|${barcode ?? ''}|${reason ?? ''}`;
   // Read once per food: the form must not reset under the user's fingers when the database changes.
   useEffect(() => {
     let cancelled = false;
@@ -213,5 +253,15 @@ export function FoodEditorScreen() {
       </Screen>
     );
   }
-  return <FoodForm key={key} existing={loaded.existing} template={loaded.template} mealId={mealId} />;
+  return (
+    <FoodForm
+      key={key}
+      existing={loaded.existing}
+      template={loaded.template}
+      draft={draft}
+      barcode={barcode}
+      reason={reason}
+      mealId={mealId}
+    />
+  );
 }

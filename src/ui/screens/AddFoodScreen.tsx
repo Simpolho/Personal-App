@@ -43,7 +43,10 @@ export function AddFoodScreen() {
         onChange={(e) => setQuery(e.target.value)}
       />
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-3 gap-2">
+        <Link to={`/meal/${mealId}/scan`} className={btnSecondary}>
+          Scan
+        </Link>
         <Link to={`/meal/${mealId}/quick`} className={btnSecondary}>
           Quick add
         </Link>

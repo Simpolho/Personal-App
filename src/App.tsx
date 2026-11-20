@@ -12,6 +12,7 @@ import { QuickAddScreen } from './ui/screens/QuickAddScreen';
 import { RecipeEditorScreen } from './ui/screens/RecipeEditorScreen';
 import { RecipePortionScreen } from './ui/screens/RecipePortionScreen';
 import { RecipesScreen } from './ui/screens/RecipesScreen';
+import { ScanScreen } from './ui/screens/ScanScreen';
 import { SettingsScreen } from './ui/screens/SettingsScreen';
 import { TemplatePicker } from './ui/screens/TemplatePicker';
 import { TodayScreen } from './ui/screens/TodayScreen';
@@ -35,6 +36,7 @@ function Screens() {
         <Route path="/meal/:mealId/add/:foodRef" element={<AmountScreen />} />
         <Route path="/meal/:mealId/recipe/:recipeId" element={<RecipePortionScreen />} />
         <Route path="/meal/:mealId/quick" element={<QuickAddScreen />} />
+        <Route path="/meal/:mealId/scan" element={<ScanScreen />} />
         <Route path="/foods/:id" element={<FoodEditorScreen />} />
         <Route path="/recipes" element={<RecipesScreen />} />
         <Route path="/recipes/:id" element={<RecipeEditorScreen />} />

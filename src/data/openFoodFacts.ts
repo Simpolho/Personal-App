@@ -70,11 +70,21 @@ export function offProductToDraft(product: Record<string, unknown>, code: string
   };
 }
 
-/** Looks a barcode up in Open Food Facts. Never throws; gives up after `timeoutMs`. */
-export async function lookupOpenFoodFacts(code: string, fetchFn: typeof fetch = fetch, timeoutMs = 8000): Promise<LookupResult> {
+/**
+ * Looks a barcode up in Open Food Facts. Never throws; gives up after `timeoutMs`, or as soon as
+ * `signal` aborts (the person left the screen).
+ */
+export async function lookupOpenFoodFacts(
+  code: string,
+  fetchFn: typeof fetch = fetch,
+  timeoutMs = 8000,
+  signal?: AbortSignal,
+): Promise<LookupResult> {
   if (typeof navigator !== 'undefined' && navigator.onLine === false) return { kind: 'offline' };
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
+  signal?.addEventListener('abort', () => controller.abort(), { once: true });
+  if (signal?.aborted) controller.abort();
   try {
     const response = await fetchFn(`${PRODUCT_URL}${encodeURIComponent(code)}?fields=${FIELDS}`, {
       headers: { 'X-User-Agent': OFF_APP_ID },

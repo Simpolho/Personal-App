@@ -1,9 +1,10 @@
 import { BarcodeDetector, prepareZXingModule } from 'barcode-detector/ponyfill';
 import wasmUrl from 'zxing-wasm/reader/zxing_reader.wasm?url';
+import { scannedValues } from '../domain/barcode';
 
 const FORMATS = ['ean_13', 'ean_8', 'upc_a', 'upc_e'];
 
-type Detector = { detect(source: HTMLVideoElement): Promise<{ rawValue: string }[]> };
+type Detector = { detect(source: HTMLVideoElement): Promise<{ rawValue: string; format?: string }[]> };
 type NativeDetector = {
   new (options: { formats: string[] }): Detector;
   getSupportedFormats(): Promise<string[]>;
@@ -20,7 +21,7 @@ export async function createDetector(): Promise<(video: HTMLVideoElement) => Pro
     try {
       if ((await Native.getSupportedFormats()).includes('ean_13')) {
         const native = new Native({ formats: FORMATS });
-        return async (video) => (await native.detect(video)).map((r) => r.rawValue);
+        return async (video) => scannedValues(await native.detect(video));
       }
     } catch {
       // Fall back to ZXing.
@@ -30,5 +31,5 @@ export async function createDetector(): Promise<(video: HTMLVideoElement) => Pro
     overrides: { locateFile: (path: string, prefix: string) => (path.endsWith('.wasm') ? wasmUrl : prefix + path) },
   });
   const zxing = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e'] });
-  return async (video) => (await zxing.detect(video)).map((r) => r.rawValue);
+  return async (video) => scannedValues(await zxing.detect(video));
 }

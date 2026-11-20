@@ -19,3 +19,34 @@ export function normalizeBarcode(input: string): string | null {
   if (code.length !== 8 && code.length !== 13) return null;
   return checkDigitOk(code) ? code : null;
 }
+
+/**
+ * Expands an 8-digit UPC-E (number system 0 or 1) to its 12-digit UPC-A, keeping the check digit.
+ * Products are stored under the full form, so a short barcode on a can still matches.
+ */
+export function expandUpcE(code: string): string | null {
+  if (!/^[01]\d{7}$/.test(code)) return null;
+  const [ns, x1, x2, x3, x4, x5, x6, check] = code;
+  let body: string;
+  if (x6 === '0' || x6 === '1' || x6 === '2') body = `${x1}${x2}${x6}0000${x3}${x4}${x5}`;
+  else if (x6 === '3') body = `${x1}${x2}${x3}00000${x4}${x5}`;
+  else if (x6 === '4') body = `${x1}${x2}${x3}${x4}00000${x5}`;
+  else body = `${x1}${x2}${x3}${x4}${x5}0000${x6}`;
+  return `${ns}${body}${check}`;
+}
+
+/** Raw values from the reader, with UPC-E expanded, ready for normalizeBarcode. */
+export function scannedValues(results: { rawValue: string; format?: string }[]): string[] {
+  return results.map((r) => (r.format === 'upc_e' ? (expandUpcE(r.rawValue) ?? r.rawValue) : r.rawValue));
+}
+
+/**
+ * A barcode typed by hand. An 8-digit number is taken as EAN-8 when its check digit fits that,
+ * otherwise as UPC-E (the printed digits look the same).
+ */
+export function normalizeTypedBarcode(input: string): string | null {
+  const direct = normalizeBarcode(input);
+  if (direct) return direct;
+  const expanded = expandUpcE(input.replace(/[\s-]/g, ''));
+  return expanded ? normalizeBarcode(expanded) : null;
+}

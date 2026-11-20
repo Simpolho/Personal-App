@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { normalizeBarcode } from '../../domain/barcode';
+import { normalizeTypedBarcode } from '../../domain/barcode';
 import { resolveBarcode } from '../../scan/resolve';
 import { CameraError, startScanning } from '../../scan/scanner';
 import { Field, Screen } from '../components/ui';
@@ -28,6 +28,10 @@ export function ScanScreen() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const stopRef = useRef<(() => void) | null>(null);
   const handled = useRef(false);
+  const alive = useRef(true);
+  /** False while the app is in the background: a camera that arrives then is turned straight off. */
+  const wantCamera = useRef(true);
+  const lookup = useRef<AbortController | null>(null);
   const [phase, setPhase] = useState<Phase>({ kind: 'starting' });
   const [typed, setTyped] = useState('');
   const [typedError, setTypedError] = useState('');
@@ -43,7 +47,10 @@ export function ScanScreen() {
       handled.current = true;
       stopCamera();
       setPhase({ kind: 'looking-up', code });
-      const outcome = await resolveBarcode(code);
+      const controller = new AbortController();
+      lookup.current = controller;
+      const outcome = await resolveBarcode(code, undefined, controller.signal);
+      if (!alive.current) return; // the person left while it was looking: stay where they went
       if (outcome.kind === 'saved') {
         navigate(`/meal/${mealId}/add/${outcome.food.id}`, { replace: true });
       } else if (outcome.kind === 'found') {
@@ -63,7 +70,7 @@ export function ScanScreen() {
     let cancelled = false;
     startScanning(video, (code) => void handleCode(code))
       .then((stop) => {
-        if (cancelled || handled.current) {
+        if (cancelled || handled.current || !wantCamera.current) {
           stop();
           return;
         }
@@ -80,13 +87,22 @@ export function ScanScreen() {
 
   // The camera never stays on in the background or after leaving.
   useEffect(() => {
+    alive.current = true;
     const onVisibility = () => {
-      if (document.visibilityState !== 'hidden' || !stopRef.current) return;
-      stopCamera();
-      setPhase({ kind: 'stopped' });
+      if (document.visibilityState !== 'hidden') return;
+      wantCamera.current = false;
+      if (stopRef.current) {
+        stopCamera();
+        setPhase({ kind: 'stopped' });
+      } else {
+        // Still starting: the start effect turns the camera off as soon as it arrives.
+        setPhase((p) => (p.kind === 'starting' ? { kind: 'stopped' } : p));
+      }
     };
     document.addEventListener('visibilitychange', onVisibility);
     return () => {
+      alive.current = false;
+      lookup.current?.abort();
       document.removeEventListener('visibilitychange', onVisibility);
       stopCamera();
     };
@@ -94,7 +110,7 @@ export function ScanScreen() {
 
   function lookUpTyped(event: FormEvent) {
     event.preventDefault();
-    const code = normalizeBarcode(typed);
+    const code = normalizeTypedBarcode(typed);
     if (!code) {
       setTypedError('Check the number: it should be the 8 or 13 digits under the barcode.');
       return;
@@ -104,6 +120,7 @@ export function ScanScreen() {
 
   const restart = () => {
     handled.current = false;
+    wantCamera.current = true;
     setPhase({ kind: 'starting' });
   };
 

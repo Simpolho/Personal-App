@@ -9,7 +9,8 @@ import { renderAt, user } from '../../test/render';
 
 // The camera is replaced by a stand-in: each test says what it "sees".
 const camera = vi.hoisted(() => ({
-  mode: { kind: 'idle' } as { kind: 'idle' } | { kind: 'codes'; codes: string[] } | { kind: 'deny' },
+  mode: { kind: 'idle' } as { kind: 'idle' } | { kind: 'codes'; codes: string[] } | { kind: 'deny' } | { kind: 'pending' },
+  release: (() => {}) as () => void,
   stop: (() => {}) as () => void,
   starts: 0,
 }));
@@ -20,6 +21,7 @@ vi.mock('../../scan/scanner', async (importOriginal) => {
     startScanning: async (_video: HTMLVideoElement, onCode: (code: string) => void) => {
       camera.starts += 1;
       if (camera.mode.kind === 'deny') throw new real.CameraError('denied');
+      if (camera.mode.kind === 'pending') await new Promise<void>((resolve) => { camera.release = resolve; });
       if (camera.mode.kind === 'codes') {
         const codes = camera.mode.codes;
         setTimeout(() => codes.forEach((c) => onCode(c)), 0);
@@ -131,4 +133,33 @@ test('putting the app in the background turns the camera off until you start it 
   Reflect.deleteProperty(document, 'visibilityState');
   await user.click(await screen.findByRole('button', { name: 'Start camera' }));
   await waitFor(() => expect(camera.starts).toBe(2));
+});
+test('cancelling while a product is being looked up stays cancelled', async () => {
+  let answer: (r: Response) => void = () => {};
+  let signal: AbortSignal | undefined;
+  fetchMock.mockImplementation((_url: string, init?: RequestInit) => {
+    signal = init?.signal ?? undefined;
+    return new Promise<Response>((resolve) => { answer = resolve; });
+  });
+  camera.mode = { kind: 'codes', codes: ['3017624010701'] };
+  renderAt(`#/meal/${meal.id}/scan`);
+  expect(await screen.findByText(/Looking up 3017624010701/)).toBeInTheDocument();
+  await user.click(screen.getByRole('link', { name: 'Cancel' }));
+  expect(await screen.findByPlaceholderText('Search foods')).toBeInTheDocument();
+  expect(signal?.aborted).toBe(true); // the request is dropped, not left running
+  answer(new Response(JSON.stringify(nutella)));
+  await new Promise((r) => setTimeout(r, 50));
+  expect(window.location.hash).toBe(`#/meal/${meal.id}/add`);
+  expect(screen.queryByRole('heading', { name: 'Check the label' })).toBeNull();
+});
+test('going to the background while the camera is still starting turns it off when it arrives', async () => {
+  camera.mode = { kind: 'pending' };
+  renderAt(`#/meal/${meal.id}/scan`);
+  await waitFor(() => expect(camera.starts).toBe(1));
+  Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true });
+  document.dispatchEvent(new Event('visibilitychange'));
+  Reflect.deleteProperty(document, 'visibilityState');
+  camera.release();
+  expect(await screen.findByRole('button', { name: 'Start camera' })).toBeInTheDocument();
+  await waitFor(() => expect(camera.stop).toHaveBeenCalled());
 });

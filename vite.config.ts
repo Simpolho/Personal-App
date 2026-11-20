@@ -31,7 +31,7 @@ export default defineConfig({
       },
       workbox: {
         // The food tables (JSON) are cached too, so search works offline from the first launch.
-        globPatterns: ['**/*.{js,css,html,svg,png,json}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,json,wasm}'],
         maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
       },
     }),

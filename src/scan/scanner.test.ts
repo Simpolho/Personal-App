@@ -58,3 +58,13 @@ test('a frame that fails to read does not stop scanning', async () => {
   await tick();
   expect(onCode).toHaveBeenCalledWith('3017624010701');
 });
+test('if no frame can be read for a while, scanning stops and says so', async () => {
+  const { tracks, stream, video } = fakeCamera();
+  const onCode = vi.fn();
+  const onReaderFailed = vi.fn();
+  await startScanning(video, onCode, { ...deps(stream, async () => { throw new Error('no reader'); }), failLimit: 3 }, { onReaderFailed });
+  await tick();
+  expect(onReaderFailed).toHaveBeenCalledTimes(1);
+  expect(onCode).not.toHaveBeenCalled();
+  for (const t of tracks) expect(t.stop).toHaveBeenCalled();
+});

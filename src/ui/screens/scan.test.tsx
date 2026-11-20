@@ -9,7 +9,7 @@ import { renderAt, user } from '../../test/render';
 
 // The camera is replaced by a stand-in: each test says what it "sees".
 const camera = vi.hoisted(() => ({
-  mode: { kind: 'idle' } as { kind: 'idle' } | { kind: 'codes'; codes: string[] } | { kind: 'deny' } | { kind: 'pending' },
+  mode: { kind: 'idle' } as { kind: 'idle' } | { kind: 'codes'; codes: string[] } | { kind: 'deny' } | { kind: 'pending' } | { kind: 'reader-fails' },
   release: (() => {}) as () => void,
   stop: (() => {}) as () => void,
   starts: 0,
@@ -18,10 +18,16 @@ vi.mock('../../scan/scanner', async (importOriginal) => {
   const real = await importOriginal<typeof import('../../scan/scanner')>();
   return {
     ...real,
-    startScanning: async (_video: HTMLVideoElement, onCode: (code: string) => void) => {
+    startScanning: async (
+      _video: HTMLVideoElement,
+      onCode: (code: string) => void,
+      _deps?: unknown,
+      options?: { onReaderFailed?: () => void },
+    ) => {
       camera.starts += 1;
       if (camera.mode.kind === 'deny') throw new real.CameraError('denied');
       if (camera.mode.kind === 'pending') await new Promise<void>((resolve) => { camera.release = resolve; });
+      if (camera.mode.kind === 'reader-fails') setTimeout(() => options?.onReaderFailed?.(), 0);
       if (camera.mode.kind === 'codes') {
         const codes = camera.mode.codes;
         setTimeout(() => codes.forEach((c) => onCode(c)), 0);
@@ -162,4 +168,11 @@ test('going to the background while the camera is still starting turns it off wh
   camera.release();
   expect(await screen.findByRole('button', { name: 'Start camera' })).toBeInTheDocument();
   await waitFor(() => expect(camera.stop).toHaveBeenCalled());
+});
+test('if barcodes cannot be read at all, the screen says so and offers typing', async () => {
+  camera.mode = { kind: 'reader-fails' };
+  renderAt(`#/meal/${meal.id}/scan`);
+  expect(await screen.findByText(/Barcodes can't be read right now/)).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
+  expect(screen.getByLabelText('Barcode')).toBeInTheDocument();
 });

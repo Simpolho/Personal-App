@@ -4,6 +4,12 @@ import { scannedValues } from '../domain/barcode';
 
 const FORMATS = ['ean_13', 'ean_8', 'upc_a', 'upc_e'];
 
+// One settings object for the whole session: the library compares it by reference, and a new
+// object would make it set the reader up again.
+const ZXING_SETTINGS = {
+  overrides: { locateFile: (path: string, prefix: string) => (path.endsWith('.wasm') ? wasmUrl : prefix + path) },
+};
+
 type Detector = { detect(source: HTMLVideoElement): Promise<{ rawValue: string; format?: string }[]> };
 type NativeDetector = {
   new (options: { formats: string[] }): Detector;
@@ -27,9 +33,7 @@ export async function createDetector(): Promise<(video: HTMLVideoElement) => Pro
       // Fall back to ZXing.
     }
   }
-  prepareZXingModule({
-    overrides: { locateFile: (path: string, prefix: string) => (path.endsWith('.wasm') ? wasmUrl : prefix + path) },
-  });
+  prepareZXingModule(ZXING_SETTINGS);
   const zxing = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e'] });
   return async (video) => scannedValues(await zxing.detect(video));
 }

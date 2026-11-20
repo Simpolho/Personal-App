@@ -10,12 +10,13 @@ type Phase =
   | { kind: 'starting' }
   | { kind: 'scanning' }
   | { kind: 'looking-up'; code: string }
-  | { kind: 'camera-error'; error: 'denied' | 'unavailable' }
+  | { kind: 'camera-error'; error: 'denied' | 'unavailable' | 'reader' }
   | { kind: 'stopped' };
 
 const CAMERA_ERRORS = {
   denied: "The camera isn't allowed. Tap Try again and choose Allow, or type the barcode below.",
   unavailable: "The camera couldn't start. Type the barcode below, or restart the phone if this keeps happening.",
+  reader: "Barcodes can't be read right now. Type the number below, or tap Try again.",
 };
 
 /**
@@ -68,7 +69,12 @@ export function ScanScreen() {
     const video = videoRef.current;
     if (!video) return;
     let cancelled = false;
-    startScanning(video, (code) => void handleCode(code))
+    startScanning(video, (code) => void handleCode(code), undefined, {
+      onReaderFailed: () => {
+        stopRef.current = null;
+        setPhase({ kind: 'camera-error', error: 'reader' });
+      },
+    })
       .then((stop) => {
         if (cancelled || handled.current || !wantCamera.current) {
           stop();

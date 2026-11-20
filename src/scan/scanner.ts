@@ -18,16 +18,27 @@ export interface ScanDeps {
   detect(video: HTMLVideoElement): Promise<string[]>;
   /** Pause between frames, in ms. */
   intervalMs?: number;
+  /** Frames in a row that may fail to read before scanning gives up. */
+  failLimit?: number;
 }
 
+// The reader (about 1 MB of WebAssembly) is loaded the first time a frame is read and kept for
+// later scans. If loading fails, the next scan tries again.
+let reader: Promise<(video: HTMLVideoElement) => Promise<string[]>> | null = null;
+
 export function defaultScanDeps(): ScanDeps {
-  // The reader (about 1 MB of WebAssembly) is only loaded the first time a frame is read.
-  let reader: Promise<(video: HTMLVideoElement) => Promise<string[]>> | null = null;
   return {
     getUserMedia: (constraints) => navigator.mediaDevices.getUserMedia(constraints),
     detect: async (video) => {
-      reader ??= import('./detector').then((m) => m.createDetector());
-      return (await reader)(video);
+      const loading = (reader ??= import('./detector').then((m) => m.createDetector()));
+      let read: (video: HTMLVideoElement) => Promise<string[]>;
+      try {
+        read = await loading;
+      } catch (error) {
+        if (reader === loading) reader = null;
+        throw error;
+      }
+      return read(video);
     },
   };
 }
@@ -35,12 +46,14 @@ export function defaultScanDeps(): ScanDeps {
 /**
  * Turns on the rear camera, shows it in `video`, and reads frames until a valid barcode appears.
  * Then it turns the camera off and calls `onCode` once, with the barcode in its normal form.
- * Returns a function that turns the camera off (safe to call more than once).
+ * If frames keep failing to read (the reader didn't load), it turns the camera off and calls
+ * `onReaderFailed`. Returns a function that turns the camera off (safe to call more than once).
  */
 export async function startScanning(
   video: HTMLVideoElement,
   onCode: (code: string) => void,
   deps: ScanDeps = defaultScanDeps(),
+  options: { onReaderFailed?: () => void } = {},
 ): Promise<() => void> {
   let stream: MediaStream;
   try {
@@ -73,11 +86,15 @@ export async function startScanning(
   }
 
   const interval = deps.intervalMs ?? 150;
+  const failLimit = deps.failLimit ?? 20; // about 3 seconds
+  let failures = 0;
   const readFrame = async () => {
     if (stopped) return;
     if (video.readyState >= 2) {
       try {
-        for (const value of await deps.detect(video)) {
+        const values = await deps.detect(video);
+        failures = 0;
+        for (const value of values) {
           const code = normalizeBarcode(value);
           if (code && !stopped) {
             stop();
@@ -86,7 +103,13 @@ export async function startScanning(
           }
         }
       } catch {
-        // One unreadable frame: try the next.
+        // One unreadable frame is fine; many in a row means the reader isn't working.
+        failures += 1;
+        if (failures >= failLimit && !stopped) {
+          stop();
+          options.onReaderFailed?.();
+          return;
+        }
       }
     }
     if (!stopped) timer = setTimeout(() => void readFrame(), interval);

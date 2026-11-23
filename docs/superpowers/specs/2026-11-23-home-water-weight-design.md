@@ -47,7 +47,7 @@ Open the app on a summary of the day rather than the food log, so the food log b
 ## Constraints
 
 - **Same app and storage:** same stack, data only on the phone, works offline.
-- **Numbers:** a decimal comma is accepted, and weights are kept to 1 decimal.
+- **Numbers:** a decimal comma is accepted. Weights, averages and weekly change are kept and shown with 2 decimals (the user's decision).
 - **Older backups** (from before step 3) must still import.
 
 ## Approaches
@@ -69,7 +69,7 @@ Open the app on a summary of the day rather than the food log, so the food log b
   - Settings behind a gear
   - the backup reminder on Home
   - the Food log unchanged
-- **Weight:** a 30-day chart, the last weight pre-filled, and the "Not weighed today" nudge shown when the app is opened.
+- **Weight:** a 30-day chart, the last weight pre-filled, the "Not weighed today" nudge shown when the app is opened, and 2 decimals for weights.
 - **Water:** only tapped water counts.
 - **Left out:** body measurements and body fat %.
 
@@ -83,7 +83,7 @@ Open the app on a summary of the day rather than the food log, so the food log b
   - All are soft-deleted like everything else.
 - **7-day average:** the mean of the weigh-ins in the 7 days ending today; days without one are skipped.
 - **Weekly change:** this average minus the average of the 7 days before. It's shown only when both weeks have at least one weigh-in.
-- **Display and input:** 1 decimal throughout. Weights between 20 and 300 kg are accepted.
+- **Input:** weights between 20 and 300 kg are accepted, typed with up to 2 decimals.
 - **Empty card:** before the first weigh-in, the weight card says "No weight yet" and shows **Log weight**.
 - **Chart:** covers the last 30 days. The vertical axis is fitted to the weights shown, with a little room above and below.
 - **Reopening the app on a new day:** a screen that belonged to the old "today" goes to Home. Home always shows today.

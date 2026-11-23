@@ -3,6 +3,7 @@ import { useEffect, useState, type ChangeEvent } from 'react';
 import { exportAll, importAll, ImportError, setLastExportAt } from '../../db/backup';
 import { db } from '../../db/db';
 import { getTargetsFor, setTargets } from '../../db/targets';
+import { getWaterSettings, setWaterSettings, type WaterSettings } from '../../db/water';
 import { INSA_SOURCE, OFF_SOURCE, USDA_SOURCE } from '../../data/credits';
 import { exportFileName } from '../../domain/backup';
 import { formatDayLabel, localDate } from '../../domain/dates';
@@ -63,6 +64,61 @@ function TargetsForm({ current, today }: { current: TargetValues | null; today: 
         {note && <p role={note.ok ? 'status' : 'alert'} className={note.ok ? okText : errorText}>{note.text}</p>}
         <button type="button" className={`${btnPrimary} w-full`} onClick={() => void save()}>
           Save — applies from today
+        </button>
+      </div>
+    </section>
+  );
+}
+
+const WATER_FIELDS: { key: keyof WaterSettings; label: string }[] = [
+  { key: 'targetMl', label: 'Daily water target (ml)' },
+  { key: 'smallMl', label: 'Small water button (ml)' },
+  { key: 'largeMl', label: 'Large water button (ml)' },
+];
+
+function WaterForm({ current }: { current: WaterSettings }) {
+  const [values, setValues] = useState<Record<keyof WaterSettings, string>>({
+    targetMl: String(current.targetMl),
+    smallMl: String(current.smallMl),
+    largeMl: String(current.largeMl),
+  });
+  const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
+
+  async function save() {
+    const next = { ...current };
+    for (const { key, label } of WATER_FIELDS) {
+      const value = parseAmount(values[key]);
+      if (value === null || Math.round(value) <= 0) return setNote({ ok: false, text: `${label}: enter a number` });
+      next[key] = Math.round(value);
+    }
+    await setWaterSettings(next);
+    setNote({ ok: true, text: 'Water settings saved.' });
+  }
+
+  return (
+    <section className="space-y-2">
+      <h2 className={sectionTitle}>Water</h2>
+      <div className={`${card} space-y-3 p-4`}>
+        <div className="grid grid-cols-2 items-end gap-3">
+          {WATER_FIELDS.map(({ key, label }) => (
+            <div key={key} className={key === 'targetMl' ? 'col-span-2' : undefined}>
+              <Field label={label}>
+                <input
+                  className={input}
+                  inputMode="numeric"
+                  value={values[key]}
+                  onChange={(e) => {
+                    setValues({ ...values, [key]: e.target.value });
+                    setNote(null);
+                  }}
+                />
+              </Field>
+            </div>
+          ))}
+        </div>
+        {note && <p role={note.ok ? 'status' : 'alert'} className={note.ok ? okText : errorText}>{note.text}</p>}
+        <button type="button" className={`${btnPrimary} w-full`} onClick={() => void save()}>
+          Save water settings
         </button>
       </div>
     </section>
@@ -214,10 +270,12 @@ function StorageSection() {
 export function SettingsScreen() {
   const today = localDate(new Date());
   const current = useLiveQuery(() => getTargetsFor(today), [today]);
+  const water = useLiveQuery(() => getWaterSettings(), []);
 
   return (
     <Screen title="Settings" back="/">
       {current !== undefined && <TargetsForm current={current} today={today} />}
+      {water !== undefined && <WaterForm current={water} />}
       <BackupSection />
       <StorageSection />
       <section className="space-y-2">

@@ -4,6 +4,7 @@ import { exportAll } from '../../db/backup';
 import { db, resetDb } from '../../db/db';
 import { createMeal, quickAdd } from '../../db/log';
 import { getTargetsFor, setTargets } from '../../db/targets';
+import { getWaterSettings } from '../../db/water';
 import { renderAt, user } from '../../test/render';
 
 beforeEach(async () => {
@@ -22,7 +23,7 @@ test('saving targets applies from today, blanks mean not set', async () => {
   renderAt('#/settings');
   await user.type(await screen.findByLabelText('Calories (kcal)'), '2300');
   await user.type(screen.getByLabelText('Protein (g)'), '160,5');
-  await user.click(screen.getByRole('button', { name: /Save/ }));
+  await user.click(screen.getByRole('button', { name: /Save — applies from today/ }));
   await waitFor(async () => expect(await getTargetsFor('2026-11-16')).toEqual({ kcal: 2300, protein: 160.5 }));
   expect(await getTargetsFor('2026-11-15')).toBeNull();
 });
@@ -32,14 +33,14 @@ test('current targets are shown; clearing them all turns targets off from today'
   const kcal = await screen.findByLabelText('Calories (kcal)');
   await waitFor(() => expect(kcal).toHaveValue('2300'));
   await user.clear(kcal);
-  await user.click(screen.getByRole('button', { name: /Save/ }));
+  await user.click(screen.getByRole('button', { name: /Save — applies from today/ }));
   await waitFor(async () => expect(await getTargetsFor('2026-11-16')).toBeNull());
   expect(await getTargetsFor('2026-11-10')).toEqual({ kcal: 2300 });
 });
 test('a target that is not a number is refused', async () => {
   renderAt('#/settings');
   await user.type(await screen.findByLabelText('Calories (kcal)'), 'lots');
-  await user.click(screen.getByRole('button', { name: /Save/ }));
+  await user.click(screen.getByRole('button', { name: /Save — applies from today/ }));
   expect(await screen.findByText('Calories (kcal): enter a number')).toBeInTheDocument();
   expect(await getTargetsFor('2026-11-16')).toBeNull();
 });
@@ -143,4 +144,36 @@ test('from the Home Screen, a plain download is not counted as a backup', async 
 test('Open Food Facts is credited', async () => {
   renderAt('#/settings');
   expect(await screen.findByText(/Open Food Facts.*ODbL/)).toBeInTheDocument();
+});
+test('water settings start at the defaults and change what Home offers', async () => {
+  const view = renderAt('#/settings');
+  const target = await screen.findByLabelText('Daily water target (ml)');
+  await waitFor(() => expect(target).toHaveValue('2000'));
+  expect(screen.getByLabelText('Small water button (ml)')).toHaveValue('250');
+  expect(screen.getByLabelText('Large water button (ml)')).toHaveValue('500');
+  await user.clear(target);
+  await user.type(target, '2500');
+  await user.clear(screen.getByLabelText('Small water button (ml)'));
+  await user.type(screen.getByLabelText('Small water button (ml)'), '330');
+  await user.clear(screen.getByLabelText('Large water button (ml)'));
+  await user.type(screen.getByLabelText('Large water button (ml)'), '750');
+  await user.click(screen.getByRole('button', { name: 'Save water settings' }));
+  expect(await screen.findByText('Water settings saved.')).toBeInTheDocument();
+  view.unmount();
+  renderAt('#/');
+  expect(await screen.findByRole('button', { name: '+330 ml' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '+750 ml' })).toBeInTheDocument();
+  expect(screen.getByText('0 / 2.5 L')).toBeInTheDocument();
+});
+test('a water setting that is zero or not a number is refused', async () => {
+  renderAt('#/settings');
+  const small = await screen.findByLabelText('Small water button (ml)');
+  await waitFor(() => expect(small).toHaveValue('250'));
+  for (const bad of ['0', 'abc']) {
+    await user.clear(small);
+    await user.type(small, bad);
+    await user.click(screen.getByRole('button', { name: 'Save water settings' }));
+    expect(await screen.findByText('Small water button (ml): enter a number')).toBeInTheDocument();
+  }
+  expect(await getWaterSettings()).toEqual({ targetMl: 2000, smallMl: 250, largeMl: 500 });
 });

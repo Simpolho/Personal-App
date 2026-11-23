@@ -97,6 +97,20 @@ export interface Targets extends BaseRecord {
   fat?: number;
 }
 
+/** One per day: `id === date`. */
+export interface WeightEntry extends BaseRecord {
+  /** Local YYYY-MM-DD. */
+  date: string;
+  kg: number;
+}
+
+/** One per tap of a water button, so Undo can remove the last one. */
+export interface WaterEntry extends BaseRecord {
+  /** Local YYYY-MM-DD. */
+  date: string;
+  ml: number;
+}
+
 /** `id === 'settings'`. */
 export interface Settings extends BaseRecord {
   lastExportAt?: string;

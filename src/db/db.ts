@@ -11,6 +11,8 @@ import type {
   Settings,
   TableFood,
   Targets,
+  WaterEntry,
+  WeightEntry,
 } from './types';
 
 export class AppDB extends Dexie {
@@ -25,6 +27,8 @@ export class AppDB extends Dexie {
   declare targets: Table<Targets, string>;
   declare settings: Table<Settings, string>;
   declare meta: Table<Meta, string>;
+  declare weights: Table<WeightEntry, string>;
+  declare water: Table<WaterEntry, string>;
 
   constructor() {
     super('fitness-app');
@@ -40,6 +44,11 @@ export class AppDB extends Dexie {
       targets: 'id, effectiveFrom',
       settings: 'id',
       meta: 'key',
+    });
+    // Step 3: weight (one per day, keyed by date) and water (one record per tap).
+    this.version(2).stores({
+      weights: 'id, date',
+      water: 'id, date',
     });
   }
 }

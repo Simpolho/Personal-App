@@ -17,6 +17,7 @@ import { ScanScreen } from './ui/screens/ScanScreen';
 import { SettingsScreen } from './ui/screens/SettingsScreen';
 import { TemplatePicker } from './ui/screens/TemplatePicker';
 import { TodayScreen } from './ui/screens/TodayScreen';
+import { WeightScreen } from './ui/screens/WeightScreen';
 
 function ToHome() {
   return <Navigate to="/" replace />;
@@ -42,6 +43,7 @@ function Screens() {
         <Route path="/recipes" element={<RecipesScreen />} />
         <Route path="/recipes/:id" element={<RecipeEditorScreen />} />
         <Route path="/settings" element={<SettingsScreen />} />
+        <Route path="/weight" element={<WeightScreen />} />
         <Route path="*" element={<ToHome />} />
       </Routes>
     </ErrorBoundary>

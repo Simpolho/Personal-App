@@ -47,6 +47,7 @@ test('a past date can be logged, and logging it again replaces it', async () => 
   await user.type(field, '79');
   await user.click(screen.getByRole('button', { name: 'Save weight' }));
   await waitFor(async () => expect(await kg()).toEqual([['2026-11-21', 79]]));
+  await waitFor(() => expect(screen.getByLabelText('Date')).toHaveValue('2026-11-23'));
   fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2026-11-21' } });
   await user.clear(screen.getByLabelText('Weight (kg)'));
   await user.type(screen.getByLabelText('Weight (kg)'), '78.8');
@@ -79,10 +80,42 @@ test('Back goes to Home', async () => {
   await user.click(await screen.findByRole('link', { name: 'Back' }));
   expect(await screen.findByRole('link', { name: 'Food log' })).toBeInTheDocument();
 });
-test('after saving, the screen confirms it and the form keeps what was typed', async () => {
+test('after saving, the confirmation stays and the form starts a new entry for today', async () => {
   renderAt('#/weight');
   await user.type(await screen.findByLabelText('Weight (kg)'), '78,6');
   await user.click(screen.getByRole('button', { name: 'Save weight' }));
-  expect(await screen.findByText('Saved 78.60 kg for Mon 23 Nov.')).toBeInTheDocument();
-  expect(screen.getByLabelText('Weight (kg)')).toHaveValue('78,6');
+  await waitFor(() => expect(screen.getByLabelText('Weight (kg)')).toHaveValue('78.60'));
+  expect(screen.getByLabelText('Date')).toHaveValue('2026-11-23');
+  expect(screen.getByText('Saved 78.60 kg for Mon 23 Nov.')).toBeInTheDocument();
+});
+test('after saving an edit, the form goes back to a new entry for today', async () => {
+  await logWeight('2026-11-21', 79.2);
+  await logWeight('2026-11-23', 78.45);
+  renderAt('#/weight');
+  await user.click(await screen.findByRole('button', { name: 'Edit Sat 21 Nov' }));
+  const field = screen.getByLabelText('Weight (kg)');
+  await user.clear(field);
+  await user.type(field, '79,1');
+  await user.click(screen.getByRole('button', { name: 'Save weight' }));
+  await waitFor(() => expect(screen.getByLabelText('Date')).toHaveValue('2026-11-23'));
+  expect(screen.getByLabelText('Weight (kg)')).toHaveValue('78.45');
+  expect(screen.getByText('Saved 79.10 kg for Sat 21 Nov.')).toBeInTheDocument();
+  expect(await kg()).toEqual([['2026-11-21', 79.1], ['2026-11-23', 78.45]]);
+});
+test('a Weight screen left open overnight logs the morning weight on the new day', async () => {
+  vi.setSystemTime(new Date('2026-11-23T07:00:00Z'));
+  renderAt('#/weight');
+  await user.type(await screen.findByLabelText('Weight (kg)'), '78,5');
+  await user.click(screen.getByRole('button', { name: 'Save weight' }));
+  await waitFor(() => expect(screen.getByLabelText('Weight (kg)')).toHaveValue('78.50'));
+  vi.setSystemTime(new Date('2026-11-24T07:00:00Z'));
+  document.dispatchEvent(new Event('visibilitychange'));
+  await waitFor(() => expect(screen.getByLabelText('Date')).toHaveValue('2026-11-24'));
+  const field = screen.getByLabelText('Weight (kg)');
+  await user.clear(field);
+  await user.type(field, '78,2');
+  await user.click(screen.getByRole('button', { name: 'Save weight' }));
+  await waitFor(() => expect(screen.getByLabelText('Weight (kg)')).toHaveValue('78.20'));
+  expect(screen.getByText('Saved 78.20 kg for Tue 24 Nov.')).toBeInTheDocument();
+  expect(await kg()).toEqual([['2026-11-23', 78.5], ['2026-11-24', 78.2]]);
 });

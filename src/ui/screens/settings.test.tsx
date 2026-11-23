@@ -4,7 +4,7 @@ import { exportAll } from '../../db/backup';
 import { db, resetDb } from '../../db/db';
 import { createMeal, quickAdd } from '../../db/log';
 import { getTargetsFor, setTargets } from '../../db/targets';
-import { getWaterSettings } from '../../db/water';
+import { getWaterSettings, setWaterSettings } from '../../db/water';
 import { renderAt, user } from '../../test/render';
 
 beforeEach(async () => {
@@ -176,4 +176,13 @@ test('a water setting that is zero or not a number is refused', async () => {
     expect(await screen.findByText('Small water button (ml): enter a number')).toBeInTheDocument();
   }
   expect(await getWaterSettings()).toEqual({ targetMl: 2000, smallMl: 250, largeMl: 500 });
+});
+test('water settings changed elsewhere, such as by restoring a backup, show in the form', async () => {
+  renderAt('#/settings');
+  const target = await screen.findByLabelText('Daily water target (ml)');
+  await waitFor(() => expect(target).toHaveValue('2000'));
+  await setWaterSettings({ targetMl: 2500, smallMl: 330, largeMl: 750 });
+  await waitFor(() => expect(target).toHaveValue('2500'));
+  expect(screen.getByLabelText('Small water button (ml)')).toHaveValue('330');
+  expect(screen.getByLabelText('Large water button (ml)')).toHaveValue('750');
 });

@@ -2,25 +2,43 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useState } from 'react';
 import { deleteWeight, listWeights, logWeight } from '../../db/weight';
 import type { WeightEntry } from '../../db/types';
-import { addDays, formatDayLabel, localDate } from '../../domain/dates';
+import { addDays, formatDayLabel } from '../../domain/dates';
 import { formatKg, parseWeight } from '../../domain/weight';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Field, Screen } from '../components/ui';
 import { WeightChart } from '../components/WeightChart';
 import { btnDanger, btnPrimary, btnSecondary, card, errorText, input, sectionTitle } from '../styles';
+import { useToday } from '../useToday';
 
-function WeightForm({ start, today }: { start: { date: string; kg: string }; today: string }) {
+type Note = { ok: boolean; text: string } | null;
+
+/**
+ * The weight form. Its note lives in the screen, so a confirmation stays visible when the form
+ * starts again on a new entry after saving.
+ */
+function WeightForm({
+  start,
+  today,
+  note,
+  onNote,
+  onSaved,
+}: {
+  start: { date: string; kg: string };
+  today: string;
+  note: Note;
+  onNote: (note: Note) => void;
+  onSaved: (text: string) => void;
+}) {
   const [date, setDate] = useState(start.date);
   const [kg, setKg] = useState(start.kg);
-  const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
 
   async function save() {
     const value = parseWeight(kg);
-    if (value === null) return setNote({ ok: false, text: 'Enter a weight between 20 and 300 kg, with up to 2 decimals' });
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return setNote({ ok: false, text: 'Pick a date' });
-    if (date > today) return setNote({ ok: false, text: "The date can't be in the future" });
+    if (value === null) return onNote({ ok: false, text: 'Enter a weight between 20 and 300 kg, with up to 2 decimals' });
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return onNote({ ok: false, text: 'Pick a date' });
+    if (date > today) return onNote({ ok: false, text: "The date can't be in the future" });
     await logWeight(date, value);
-    setNote({ ok: true, text: `Saved ${formatKg(value)} kg for ${formatDayLabel(date)}.` });
+    onSaved(`Saved ${formatKg(value)} kg for ${formatDayLabel(date)}.`);
   }
 
   return (
@@ -33,7 +51,7 @@ function WeightForm({ start, today }: { start: { date: string; kg: string }; tod
             value={kg}
             onChange={(e) => {
               setKg(e.target.value);
-              setNote(null);
+              onNote(null);
             }}
           />
         </Field>
@@ -45,7 +63,7 @@ function WeightForm({ start, today }: { start: { date: string; kg: string }; tod
             max={today}
             onChange={(e) => {
               setDate(e.target.value);
-              setNote(null);
+              onNote(null);
             }}
           />
         </Field>
@@ -59,10 +77,11 @@ function WeightForm({ start, today }: { start: { date: string; kg: string }; tod
 }
 
 export function WeightScreen() {
-  const today = localDate(new Date());
+  const today = useToday();
   const weights = useLiveQuery(() => listWeights(), []);
   const [editing, setEditing] = useState<WeightEntry | null>(null);
   const [deleting, setDeleting] = useState<WeightEntry | null>(null);
+  const [note, setNote] = useState<Note>(null);
 
   if (weights === undefined) return <Screen title="Weight" back="/" />;
 
@@ -71,10 +90,23 @@ export function WeightScreen() {
     ? { date: editing.date, kg: formatKg(editing.kg) }
     : { date: today, kg: last ? formatKg(last.kg) : '' };
   const recent = weights.some((w) => w.date >= addDays(today, -29) && w.date <= today);
+  // A new entry starts again on a new day and after every save, so the next weight typed can't
+  // land on a day that was just logged or edited.
+  const newest = weights.reduce((latest, w) => (w.updatedAt > latest ? w.updatedAt : latest), '');
 
   return (
     <Screen title="Weight" back="/">
-      <WeightForm key={editing ? `edit-${editing.date}-${editing.updatedAt}` : 'new'} start={start} today={today} />
+      <WeightForm
+        key={editing ? `edit-${editing.date}-${editing.updatedAt}` : `new-${today}-${newest}`}
+        start={start}
+        today={today}
+        note={note}
+        onNote={setNote}
+        onSaved={(text) => {
+          setEditing(null);
+          setNote({ ok: true, text });
+        }}
+      />
 
       {recent && (
         <section className={`${card} p-3`}>
@@ -94,7 +126,10 @@ export function WeightScreen() {
                 <li key={w.date} className="flex items-center justify-between gap-2 py-2 pr-2 pl-4">
                   <span className="whitespace-nowrap tabular-nums">{`${label} · ${formatKg(w.kg)} kg`}</span>
                   <span className="flex shrink-0 gap-1">
-                    <button type="button" aria-label={`Edit ${label}`} className={`${btnSecondary} px-3 text-sm`} onClick={() => setEditing(w)}>
+                    <button type="button" aria-label={`Edit ${label}`} className={`${btnSecondary} px-3 text-sm`} onClick={() => {
+                        setEditing(w);
+                        setNote(null);
+                      }}>
                       Edit
                     </button>
                     <button type="button" aria-label={`Delete ${label}`} className={`${btnDanger} px-3 text-sm`} onClick={() => setDeleting(w)}>

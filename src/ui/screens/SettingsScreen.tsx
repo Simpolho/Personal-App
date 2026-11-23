@@ -76,13 +76,22 @@ const WATER_FIELDS: { key: keyof WaterSettings; label: string }[] = [
   { key: 'largeMl', label: 'Large water button (ml)' },
 ];
 
+const waterText = (s: WaterSettings): Record<keyof WaterSettings, string> => ({
+  targetMl: String(s.targetMl),
+  smallMl: String(s.smallMl),
+  largeMl: String(s.largeMl),
+});
+
 function WaterForm({ current }: { current: WaterSettings }) {
-  const [values, setValues] = useState<Record<keyof WaterSettings, string>>({
-    targetMl: String(current.targetMl),
-    smallMl: String(current.smallMl),
-    largeMl: String(current.largeMl),
-  });
+  const [values, setValues] = useState(() => waterText(current));
+  const [shown, setShown] = useState(current);
   const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
+  // Settings changed elsewhere (restoring a backup) replace what the boxes show, so an old value
+  // can't be saved back over the restored one.
+  if (WATER_FIELDS.some(({ key }) => current[key] !== shown[key])) {
+    setShown(current);
+    setValues(waterText(current));
+  }
 
   async function save() {
     const next = { ...current };
@@ -91,6 +100,7 @@ function WaterForm({ current }: { current: WaterSettings }) {
       if (value === null || Math.round(value) <= 0) return setNote({ ok: false, text: `${label}: enter a number` });
       next[key] = Math.round(value);
     }
+    setShown(next);
     await setWaterSettings(next);
     setNote({ ok: true, text: 'Water settings saved.' });
   }

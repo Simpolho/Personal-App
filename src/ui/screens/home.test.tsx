@@ -78,10 +78,12 @@ test('the backup reminder shows on Home when a backup is due', async () => {
 test('opening the app after midnight shows the new day, with no water yet', async () => {
   vi.setSystemTime(new Date('2026-11-23T22:00:00Z'));
   await addWater('2026-11-23', 500);
+  await logWeight('2026-11-23', 78);
   renderAt('#/');
   expect(await screen.findByText('0.5 / 2 L')).toBeInTheDocument();
   vi.setSystemTime(new Date('2026-11-24T08:00:00Z'));
   document.dispatchEvent(new Event('visibilitychange'));
   expect(await screen.findByRole('heading', { name: 'Tue 24 Nov' })).toBeInTheDocument();
   expect(await screen.findByText('0 / 2 L')).toBeInTheDocument();
+  expect(screen.getByText('Not weighed today')).toBeInTheDocument();
 });

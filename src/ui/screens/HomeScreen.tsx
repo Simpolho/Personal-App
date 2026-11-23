@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { db } from '../../db/db';
 import { firstEntryAt, getDay, removeEmptyMeals } from '../../db/log';
@@ -7,28 +7,13 @@ import { getTargetsFor } from '../../db/targets';
 import { addWater, getWaterSettings, undoWater, waterTotal } from '../../db/water';
 import { listWeights } from '../../db/weight';
 import { backupDue } from '../../domain/backup';
-import { formatDayLabel, localDate } from '../../domain/dates';
+import { formatDayLabel } from '../../domain/dates';
 import { average7, formatChange, formatKg, weeklyChange } from '../../domain/weight';
 import { TotalsCard } from '../components/TotalsCard';
 import { formatLitres } from '../format';
 import { btnPrimary, btnSecondary, card, sectionTitle } from '../styles';
+import { useToday } from '../useToday';
 
-/** Today's date, kept current when the app comes back from the background on a new day. */
-function useToday(): string {
-  const [today, setToday] = useState(() => localDate(new Date()));
-  useEffect(() => {
-    const refresh = () => {
-      if (document.visibilityState !== 'hidden') setToday(localDate(new Date()));
-    };
-    document.addEventListener('visibilitychange', refresh);
-    window.addEventListener('pageshow', refresh);
-    return () => {
-      document.removeEventListener('visibilitychange', refresh);
-      window.removeEventListener('pageshow', refresh);
-    };
-  }, []);
-  return today;
-}
 
 function WaterCard({ today }: { today: string }) {
   const water = useLiveQuery(async () => ({ total: await waterTotal(today), settings: await getWaterSettings() }), [today]);

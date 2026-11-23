@@ -16,8 +16,10 @@ export function WeightChart({ weights, endDate }: { weights: WeightEntry[]; endD
   const shown = weights.filter((w) => w.date >= start && w.date <= endDate);
   const series = averageSeries(weights, endDate, DAYS);
   const values = [...shown.map((w) => w.kg), ...series.flatMap((p) => (p.avg === null ? [] : [p.avg]))];
-  const min = Math.min(...values) - 0.5;
-  const max = Math.max(...values) + 0.5;
+  const low = Math.min(...values);
+  const high = Math.max(...values);
+  const min = low - 0.5;
+  const max = high + 0.5;
 
   const dayIndex = (date: string) => series.findIndex((p) => p.date === date);
   const x = (i: number) => PAD.left + (i / (DAYS - 1)) * (W - PAD.left - PAD.right);
@@ -30,12 +32,14 @@ export function WeightChart({ weights, endDate }: { weights: WeightEntry[]; endD
   return (
     <svg role="img" aria-label="Last 30 days" viewBox={`0 0 ${W} ${H}`} className="w-full">
       <line x1={PAD.left} x2={W - PAD.right} y1={H - PAD.bottom} y2={H - PAD.bottom} className="stroke-zinc-200" />
-      <text x={PAD.left - 6} y={PAD.top + 4} textAnchor="end" className="fill-zinc-500 text-[10px]">
-        {formatKg(max - 0.5)}
+      <text x={PAD.left - 6} y={y(high)} textAnchor="end" dominantBaseline="middle" className="fill-zinc-500 text-[10px]">
+        {formatKg(high)}
       </text>
-      <text x={PAD.left - 6} y={H - PAD.bottom} textAnchor="end" className="fill-zinc-500 text-[10px]">
-        {formatKg(min + 0.5)}
-      </text>
+      {formatKg(low) !== formatKg(high) && (
+        <text x={PAD.left - 6} y={y(low)} textAnchor="end" dominantBaseline="middle" className="fill-zinc-500 text-[10px]">
+          {formatKg(low)}
+        </text>
+      )}
       <text x={PAD.left} y={H - 4} className="fill-zinc-500 text-[10px]">
         30 days ago
       </text>

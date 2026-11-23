@@ -91,13 +91,13 @@ export function WeightScreen() {
             {[...weights].reverse().map((w) => {
               const label = formatDayLabel(w.date);
               return (
-                <li key={w.date} className="flex items-center justify-between gap-2 px-4 py-2">
-                  <span className="tabular-nums">{`${label} · ${formatKg(w.kg)} kg`}</span>
-                  <span className="flex gap-2">
-                    <button type="button" aria-label={`Edit ${label}`} className={btnSecondary} onClick={() => setEditing(w)}>
+                <li key={w.date} className="flex items-center justify-between gap-2 py-2 pr-2 pl-4">
+                  <span className="whitespace-nowrap tabular-nums">{`${label} · ${formatKg(w.kg)} kg`}</span>
+                  <span className="flex shrink-0 gap-1">
+                    <button type="button" aria-label={`Edit ${label}`} className={`${btnSecondary} px-3 text-sm`} onClick={() => setEditing(w)}>
                       Edit
                     </button>
-                    <button type="button" aria-label={`Delete ${label}`} className={btnDanger} onClick={() => setDeleting(w)}>
+                    <button type="button" aria-label={`Delete ${label}`} className={`${btnDanger} px-3 text-sm`} onClick={() => setDeleting(w)}>
                       Delete
                     </button>
                   </span>

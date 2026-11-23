@@ -33,3 +33,8 @@ export function leftAfterText(targets: TargetValues | null, totalsAfter: Nutrien
   if (left.fat !== undefined) parts.push(`${formatWhole(left.fat)} g fat`);
   return parts.length > 0 ? `Left after this: ${parts.join(' · ')}` : null;
 }
+
+/** Litres with up to 2 decimals and no trailing zeros: 1250 → "1.25", 2000 → "2", 500 → "0.5". */
+export function formatLitres(ml: number): string {
+  return String(Math.round(ml / 10) / 100);
+}

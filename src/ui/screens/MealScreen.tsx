@@ -12,6 +12,7 @@ import {
 } from '../../db/log';
 import { saveMealAsTemplate } from '../../db/templates';
 import type { LogEntry } from '../../db/types';
+import { localDate } from '../../domain/dates';
 import { formatNutrient, parseAmount } from '../../domain/nutrients';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Field, Screen } from '../components/ui';
@@ -128,7 +129,7 @@ export function MealScreen() {
       title={meal.name}
       back={dayPath}
       footer={
-        <button type="button" className={`${btnDone} w-full`} onClick={() => navigate(dayPath)}>
+        <button type="button" className={`${btnDone} w-full`} onClick={() => navigate(meal.date === localDate(new Date()) ? '/' : dayPath)}>
           Done
         </button>
       }

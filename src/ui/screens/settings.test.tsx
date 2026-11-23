@@ -104,11 +104,13 @@ test('from the Home Screen: storage is reported and the instructions are hidden'
   expect(await screen.findByText('Saved permanently: yes · 3.4 MB used')).toBeInTheDocument();
   expect(screen.queryByText(/Add to Home Screen/)).toBeNull();
 });
-test('Today links to Settings and Recipes', async () => {
-  renderAt('#/day/2026-11-16');
+test('Home links to Settings; the food log links to Recipes', async () => {
+  renderAt('#/');
   await user.click(await screen.findByRole('link', { name: 'Settings' }));
   expect(await screen.findByRole('heading', { name: 'Settings' })).toBeInTheDocument();
   await user.click(screen.getByRole('link', { name: 'Back' }));
+  await user.click(await screen.findByRole('link', { name: 'Food log' }));
+  expect(screen.queryByRole('link', { name: 'Settings' })).toBeNull();
   await user.click(await screen.findByRole('link', { name: 'Recipes' }));
   expect(await screen.findByRole('heading', { name: 'Recipes' })).toBeInTheDocument();
 });

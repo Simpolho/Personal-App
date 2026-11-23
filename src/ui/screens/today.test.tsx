@@ -58,21 +58,18 @@ test('arrows change the day and Day complete persists', async () => {
   await user.click(screen.getByRole('checkbox', { name: 'Day complete' }));
   await waitFor(async () => expect((await getDay('2026-11-15')).complete).toBe(true));
 });
-test('backup banner appears when a backup is due', async () => {
+test('the food log no longer shows the backup banner (it moved to Home)', async () => {
   vi.setSystemTime(new Date('2026-10-01T10:00:00Z'));
   await quickAdd((await createMeal('2026-10-01')).id, undefined, { kcal: 1 });
   vi.setSystemTime(new Date('2026-11-16T10:00:00Z'));
   renderAt('#/day/2026-11-16');
-  expect(await screen.findByText(/Last backup over 14 days ago/)).toBeInTheDocument();
-});
-test('no backup banner on a fresh install', async () => {
-  renderAt('#/day/2026-11-16');
   await screen.findByText('Mon 16 Nov');
   expect(screen.queryByText(/Last backup/)).toBeNull();
 });
-test('the root route opens today', async () => {
-  renderAt('#/');
-  expect(await screen.findByText('Mon 16 Nov')).toBeInTheDocument();
+test('the food log links back to Home', async () => {
+  renderAt('#/day/2026-11-16');
+  await user.click(await screen.findByRole('link', { name: 'Home' }));
+  expect(await screen.findByRole('link', { name: 'Food log' })).toBeInTheDocument();
 });
 test('an address that is not a date goes to today', async () => {
   renderAt('#/day/not-a-date');
@@ -85,6 +82,7 @@ test('reopening the app the next morning shows the new day, not yesterday', asyn
   vi.setSystemTime(new Date('2026-11-17T08:00:00Z'));
   document.dispatchEvent(new Event('visibilitychange'));
   expect(await screen.findByText('Tue 17 Nov')).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'Food log' })).toBeInTheDocument(); // on Home
 });
 test('reopening while looking at an earlier day stays on that day', async () => {
   renderAt('#/day/2026-11-10');
@@ -107,8 +105,8 @@ test('at 00:30 the app opens on the new date and a meal logged then belongs to i
   vi.setSystemTime(new Date('2026-07-01T23:30:00Z')); // 00:30 on 2 July in Lisbon (summer time)
   renderAt('#/');
   expect(await screen.findByText('Thu 2 Jul')).toBeInTheDocument();
-  await user.click(screen.getByRole('button', { name: 'Log food' }));
-  await user.click(screen.getByRole('button', { name: 'New meal' }));
+  await user.click(screen.getByRole('link', { name: '+ Log food' }));
+  await user.click(await screen.findByRole('button', { name: 'New meal' }));
   await screen.findByPlaceholderText('Search foods');
   const day = await getDay('2026-07-02');
   expect(day.meals.map((x) => [x.meal.date, x.meal.time])).toEqual([['2026-07-02', '00:30']]);

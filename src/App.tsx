@@ -6,6 +6,7 @@ import { localDate } from './domain/dates';
 import { AddFoodScreen } from './ui/screens/AddFoodScreen';
 import { AmountScreen } from './ui/screens/AmountScreen';
 import { FoodEditorScreen } from './ui/screens/FoodEditorScreen';
+import { HomeScreen } from './ui/screens/HomeScreen';
 import { LogFoodSheet } from './ui/screens/LogFoodSheet';
 import { MealScreen } from './ui/screens/MealScreen';
 import { QuickAddScreen } from './ui/screens/QuickAddScreen';
@@ -17,8 +18,8 @@ import { SettingsScreen } from './ui/screens/SettingsScreen';
 import { TemplatePicker } from './ui/screens/TemplatePicker';
 import { TodayScreen } from './ui/screens/TodayScreen';
 
-function ToToday() {
-  return <Navigate to={`/day/${localDate(new Date())}`} replace />;
+function ToHome() {
+  return <Navigate to="/" replace />;
 }
 
 /** One boundary per address: moving to another screen clears a failure. */
@@ -27,7 +28,7 @@ function Screens() {
   return (
     <ErrorBoundary key={location.pathname}>
       <Routes>
-        <Route path="/" element={<ToToday />} />
+        <Route path="/" element={<HomeScreen />} />
         <Route path="/day/:date" element={<TodayScreen />} />
         <Route path="/day/:date/log" element={<LogFoodSheet />} />
         <Route path="/day/:date/templates" element={<TemplatePicker />} />
@@ -41,7 +42,7 @@ function Screens() {
         <Route path="/recipes" element={<RecipesScreen />} />
         <Route path="/recipes/:id" element={<RecipeEditorScreen />} />
         <Route path="/settings" element={<SettingsScreen />} />
-        <Route path="*" element={<ToToday />} />
+        <Route path="*" element={<ToHome />} />
       </Routes>
     </ErrorBoundary>
   );
@@ -49,7 +50,7 @@ function Screens() {
 
 /**
  * iOS keeps a Home Screen app suspended for days. When it comes back on a new date and the
- * screen belonged to the old "today" (that day, or one of its meals), show the new day instead,
+ * screen belonged to the old "today" (that day, or one of its meals), go to Home (always today),
  * so food is not logged on yesterday. Screens of earlier days are left where they are.
  */
 function NewDayWatcher() {
@@ -73,7 +74,7 @@ function NewDayWatcher() {
       let screenDate = /^\/day\/(\d{4}-\d{2}-\d{2})/.exec(current)?.[1];
       const mealId = /^\/meal\/([^/]+)/.exec(current)?.[1];
       if (!screenDate && mealId) screenDate = (await db.meals.get(mealId))?.date;
-      if (screenDate === before && path.current === current) navigate(`/day/${now}`, { replace: true });
+      if (screenDate === before && path.current === current) navigate('/', { replace: true });
     };
     const onChange = () => void check();
     document.addEventListener('visibilitychange', onChange);

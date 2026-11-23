@@ -1,10 +1,8 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
-import { db } from '../../db/db';
-import { firstEntryAt, getDay, removeEmptyMeals, setDayComplete } from '../../db/log';
+import { getDay, removeEmptyMeals, setDayComplete } from '../../db/log';
 import { getTargetsFor } from '../../db/targets';
-import { backupDue } from '../../domain/backup';
 import { addDays, formatDayLabel, localDate } from '../../domain/dates';
 import { formatNutrient } from '../../domain/nutrients';
 import { TotalsCard } from '../components/TotalsCard';
@@ -20,12 +18,6 @@ export function TodayScreen() {
 
   const day = useLiveQuery(() => (valid ? getDay(date) : undefined), [date, valid]);
   const targets = useLiveQuery(() => (valid ? getTargetsFor(date) : null), [date, valid]);
-  const reminder =
-    useLiveQuery(async () => {
-      const lastExportAt = (await db.settings.get('settings'))?.lastExportAt;
-      // Only look for the first entry (a scan of the whole log) while there has never been a backup.
-      return backupDue(lastExportAt, lastExportAt ? undefined : await firstEntryAt(), new Date());
-    }, []) ?? false;
 
   // A meal left with nothing in it (New meal, then back) doesn't stay on the day.
   useEffect(() => {
@@ -41,6 +33,9 @@ export function TodayScreen() {
     <div className="mx-auto flex min-h-dvh max-w-md flex-col">
       <header className="sticky top-0 z-10 border-b border-zinc-200 bg-white/95 pt-[env(safe-area-inset-top)] backdrop-blur">
         <div className="flex min-h-12 items-center justify-between px-2">
+          <Link to="/" aria-label="Home" className={arrow}>
+            <span aria-hidden="true">⌂</span>
+          </Link>
           <button type="button" aria-label="Previous day" className={arrow} onClick={() => navigate(`/day/${addDays(date, -1)}`)}>
             <span aria-hidden="true">‹</span>
           </button>
@@ -55,16 +50,11 @@ export function TodayScreen() {
           <button type="button" aria-label="Next day" className={arrow} onClick={() => navigate(`/day/${addDays(date, 1)}`)}>
             <span aria-hidden="true">›</span>
           </button>
+          <span aria-hidden="true" className="size-11" />
         </div>
       </header>
 
       <main className="flex-1 space-y-4 p-4 pb-32">
-        {reminder && (
-          <Link to="/settings" className="block rounded-xl bg-amber-50 p-3 text-sm font-medium text-amber-900 ring-1 ring-amber-200">
-            Last backup over 14 days ago — Export now
-          </Link>
-        )}
-
         <TotalsCard totals={day?.totals ?? {}} targets={targets ?? null} loading={day === undefined || targets === undefined} />
 
         {day === undefined ? null : meals.length === 0 ? (
@@ -110,14 +100,9 @@ export function TodayScreen() {
           Day complete
         </label>
 
-        <nav className="grid grid-cols-2 gap-2">
-          <Link to="/recipes" className={btnSecondary}>
-            Recipes
-          </Link>
-          <Link to="/settings" className={btnSecondary}>
-            Settings
-          </Link>
-        </nav>
+        <Link to="/recipes" className={`${btnSecondary} w-full`}>
+          Recipes
+        </Link>
       </main>
 
       <div className="fixed inset-x-0 bottom-0 z-10 mx-auto max-w-md border-t border-zinc-200 bg-white/95 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] backdrop-blur">

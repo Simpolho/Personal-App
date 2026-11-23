@@ -16,6 +16,8 @@ export const RECORD_TABLES = [
   'logEntries',
   'targets',
   'settings',
+  'weights',
+  'water',
 ] as const;
 export type RecordTable = (typeof RECORD_TABLES)[number];
 
@@ -37,7 +39,9 @@ export class ImportError extends Error {
 export async function setLastExportAt(value: string | undefined): Promise<void> {
   const existing = await db.settings.get('settings');
   const now = nowIso();
-  const settings: Settings = { id: 'settings', createdAt: existing?.createdAt ?? now, updatedAt: now };
+  // Keep everything else in the settings record (e.g. water settings).
+  const { lastExportAt: _previous, ...rest } = existing ?? {};
+  const settings: Settings = { ...rest, id: 'settings', createdAt: existing?.createdAt ?? now, updatedAt: now };
   if (value) settings.lastExportAt = value;
   await db.settings.put(settings);
 }
@@ -82,7 +86,11 @@ const SHAPES: Record<RecordTable, (r: Record<string, unknown>) => boolean> = {
   days: (r) => isString(r.date) && typeof r.complete === 'boolean',
   logEntries: (r) => isString(r.mealId) && isString(r.nameSnapshot) && isNumber(r.amount) && isString(r.unit) && isNutrients(r.nutrientsSnapshot),
   targets: (r) => isString(r.effectiveFrom) && ['kcal', 'protein', 'carbs', 'fat'].every((k) => r[k] === undefined || isNumber(r[k])),
-  settings: (r) => r.lastExportAt === undefined || isString(r.lastExportAt),
+  settings: (r) =>
+    (r.lastExportAt === undefined || isString(r.lastExportAt)) &&
+    ['waterTargetMl', 'waterSmallMl', 'waterLargeMl'].every((k) => r[k] === undefined || isNumber(r[k])),
+  weights: (r) => isString(r.date) && isNumber(r.kg),
+  water: (r) => isString(r.date) && isNumber(r.ml),
 };
 
 function readRecords(file: unknown): Record<RecordTable, BaseRecord[]> {

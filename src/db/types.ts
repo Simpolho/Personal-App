@@ -114,6 +114,9 @@ export interface WaterEntry extends BaseRecord {
 /** `id === 'settings'`. */
 export interface Settings extends BaseRecord {
   lastExportAt?: string;
+  waterTargetMl?: number;
+  waterSmallMl?: number;
+  waterLargeMl?: number;
 }
 
 export interface Meta {

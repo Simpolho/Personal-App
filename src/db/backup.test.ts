@@ -4,6 +4,8 @@ import { db, resetDb } from './db';
 import { listFoods, saveFood } from './foods';
 import { createMeal, deleteEntry, getDay, logFood, quickAdd, setDayComplete } from './log';
 import { setTargets } from './targets';
+import { addWater, getWaterSettings, setWaterSettings, waterTotal } from './water';
+import { listWeights, logWeight } from './weight';
 
 beforeEach(() => resetDb());
 
@@ -84,4 +86,28 @@ test('records with missing or wrong fields are refused, so a bad file cannot bre
   ];
   for (const records of bad) await expect(importAll(file(records))).rejects.toBeInstanceOf(ImportError);
   expect(await db.logEntries.count() + await db.foods.count() + await db.meals.count()).toBe(0);
+});
+test('exporting a backup keeps the water settings', async () => {
+  await setWaterSettings({ targetMl: 2500, smallMl: 330, largeMl: 750 });
+  await exportAll();
+  expect(await getWaterSettings()).toEqual({ targetMl: 2500, smallMl: 330, largeMl: 750 });
+});
+test('weights and water go through a backup and back', async () => {
+  await logWeight('2026-11-23', 78.45);
+  await addWater('2026-11-23', 500);
+  const file = await exportAll();
+  expect(file.records.weights).toHaveLength(1);
+  expect(file.records.water).toHaveLength(1);
+  await resetDb();
+  await importAll(JSON.parse(JSON.stringify(file)));
+  expect((await listWeights()).map((w) => w.kg)).toEqual([78.45]);
+  expect(await waterTotal('2026-11-23')).toBe(500);
+});
+test('a backup from before weights and water still imports', async () => {
+  const old = { format: 'fitness-app-export', version: 1, exportedAt: '', records: { foods: [], meals: [] } };
+  expect(await importAll(old)).toMatchObject({ added: 0 });
+});
+test('a water record with a non-number amount is refused', async () => {
+  const bad = { format: 'fitness-app-export', version: 1, exportedAt: '', records: { water: [{ id: 'w', createdAt: 'x', updatedAt: 'x', date: '2026-11-23', ml: 'lots' }] } };
+  await expect(importAll(bad)).rejects.toBeInstanceOf(ImportError);
 });

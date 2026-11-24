@@ -6,6 +6,7 @@ import type { MuscleGroup, WeightUnit } from '../../db/types';
 import { listExercises, newEntry, saveExercise, saveWorkout } from '../../db/workouts';
 import { MUSCLE_GROUPS, WEIGHT_UNITS } from '../../domain/workouts';
 import { Field, Screen } from '../components/ui';
+import { WEIGHT_UNIT_NAMES } from '../labels';
 import { btnPrimary, card, errorText, input, row, sectionTitle } from '../styles';
 
 const fold = (text: string) =>
@@ -14,8 +15,6 @@ const fold = (text: string) =>
     .replace(/\p{Diacritic}/gu, '')
     .toLowerCase()
     .trim();
-
-export const UNIT_NAMES: Record<WeightUnit, string> = { kg: 'kg', lb: 'lb', plates: 'Plates', bodyweight: 'Bodyweight' };
 
 /** Picks an exercise to add to a workout, or to swap one for; can create a new exercise on the spot. */
 export function ExercisePickerScreen() {
@@ -115,7 +114,7 @@ export function ExercisePickerScreen() {
               <select className={input} value={unit} onChange={(e) => setUnit(e.target.value as WeightUnit)}>
                 {WEIGHT_UNITS.map((u) => (
                   <option key={u} value={u}>
-                    {UNIT_NAMES[u]}
+                    {WEIGHT_UNIT_NAMES[u]}
                   </option>
                 ))}
               </select>

@@ -123,3 +123,81 @@ export interface Meta {
   key: string;
   value: string;
 }
+
+/** Step 5: workouts. The fixed list of muscle groups, in display order. */
+export type MuscleGroup =
+  | 'Chest'
+  | 'Back'
+  | 'Shoulders'
+  | 'Biceps'
+  | 'Triceps'
+  | 'Forearms'
+  | 'Quads'
+  | 'Hamstrings'
+  | 'Glutes'
+  | 'Calves'
+  | 'Abs';
+
+/** What an exercise's weight is measured in. For bodyweight, the weight typed is the added weight. */
+export type WeightUnit = 'kg' | 'lb' | 'plates' | 'bodyweight';
+
+export interface Exercise extends BaseRecord {
+  name: string;
+  muscle: MuscleGroup;
+  unit: WeightUnit;
+  /** Plates only: what one plate on this machine weighs. Without it, plate sets add no volume. */
+  plateWeight?: { value: number; unit: 'kg' | 'lb' };
+  /** Weight and reps are for one side; volume counts both. */
+  eachSide: boolean;
+  /** Shown every time the exercise comes up. */
+  note: string;
+}
+
+export interface RoutineItem {
+  exerciseId: string;
+  sets: number;
+  repsMin: number;
+  repsMax: number;
+  /** As written in the plan, e.g. "7–8" or "≤8"; may be empty. */
+  rpeTarget: string;
+  /** Used to pre-fill until the exercise has been done once. */
+  startWeight?: number;
+}
+
+export interface Routine extends BaseRecord {
+  name: string;
+  /** Days it's planned for, 0 = Sunday … 6 = Saturday. */
+  weekdays: number[];
+  items: RoutineItem[];
+}
+
+export interface WorkoutSet {
+  id: string;
+  warmup: boolean;
+  weight?: number;
+  reps?: number;
+  rpe?: number;
+  done: boolean;
+}
+
+export interface WorkoutEntry {
+  id: string;
+  exerciseId: string;
+  /** The unit the sets were logged in, kept even if the exercise's unit changes later. */
+  unit: WeightUnit;
+  target?: Omit<RoutineItem, 'exerciseId' | 'startWeight'>;
+  sets: WorkoutSet[];
+}
+
+/** One record per workout, holding its exercises and sets. In progress until `finishedAt` is set. */
+export interface Workout extends BaseRecord {
+  /** Local YYYY-MM-DD the workout belongs to (its start). */
+  date: string;
+  name: string;
+  routineId?: string;
+  startedAt: string;
+  finishedAt?: string;
+  entries: WorkoutEntry[];
+  /** The entries' exercise ids, indexed to find "last time" quickly. */
+  exerciseIds: string[];
+}

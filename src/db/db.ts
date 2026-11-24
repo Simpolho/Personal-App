@@ -1,6 +1,7 @@
 import Dexie, { type Table } from 'dexie';
 import type {
   Day,
+  Exercise,
   Food,
   FoodUsage,
   LogEntry,
@@ -8,11 +9,13 @@ import type {
   MealTemplate,
   Meta,
   Recipe,
+  Routine,
   Settings,
   TableFood,
   Targets,
   WaterEntry,
   WeightEntry,
+  Workout,
 } from './types';
 
 export class AppDB extends Dexie {
@@ -29,6 +32,9 @@ export class AppDB extends Dexie {
   declare meta: Table<Meta, string>;
   declare weights: Table<WeightEntry, string>;
   declare water: Table<WaterEntry, string>;
+  declare exercises: Table<Exercise, string>;
+  declare routines: Table<Routine, string>;
+  declare workouts: Table<Workout, string>;
 
   constructor() {
     super('fitness-app');
@@ -49,6 +55,12 @@ export class AppDB extends Dexie {
     this.version(2).stores({
       weights: 'id, date',
       water: 'id, date',
+    });
+    // Step 5: workouts. One record per workout; `exerciseIds` is multi-entry to find "last time".
+    this.version(3).stores({
+      exercises: 'id, name',
+      routines: 'id',
+      workouts: 'id, date, startedAt, *exerciseIds',
     });
   }
 }

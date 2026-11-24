@@ -20,6 +20,7 @@ import { TodayScreen } from './ui/screens/TodayScreen';
 import { WeightScreen } from './ui/screens/WeightScreen';
 import { WorkoutScreen } from './ui/screens/WorkoutScreen';
 import { ExercisePickerScreen } from './ui/screens/ExercisePickerScreen';
+import { RecapScreen } from './ui/screens/RecapScreen';
 import { Screen } from './ui/components/ui';
 
 function ToHome() {
@@ -50,8 +51,8 @@ function Screens() {
         <Route path="/workout/:id" element={<WorkoutScreen />} />
         <Route path="/workout/:id/add" element={<ExercisePickerScreen />} />
         <Route path="/workout/:id/swap/:entryId" element={<ExercisePickerScreen />} />
-        {/* Placeholders until the recap (Task 5) and Workouts (Task 6) screens exist. */}
-        <Route path="/workout/:id/recap" element={<Screen title="Recap" back="/" />} />
+        <Route path="/workout/:id/recap" element={<RecapScreen />} />
+        {/* Placeholder until the Workouts screen (Task 6) exists. */}
         <Route path="/workouts" element={<Screen title="Workouts" back="/" />} />
         <Route path="*" element={<ToHome />} />
       </Routes>

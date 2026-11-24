@@ -78,11 +78,11 @@ export async function lastSetsFor(exerciseId: string, before: string, excludeId?
   return null;
 }
 
-/** A new entry for an exercise added mid-workout: one set, pre-filled from last time. */
-export async function newEntry(exerciseId: string, before: string): Promise<WorkoutEntry> {
+/** A new entry for an exercise added mid-workout: `count` sets (one by default), pre-filled from last time. */
+export async function newEntry(exerciseId: string, before: string, count = 1): Promise<WorkoutEntry> {
   const exercise = await db.exercises.get(exerciseId);
   if (!exercise) throw new Error('Unknown exercise');
-  return { id: crypto.randomUUID(), exerciseId, unit: exercise.unit, sets: prefillSets(1, await lastSetsFor(exerciseId, before)) };
+  return { id: crypto.randomUUID(), exerciseId, unit: exercise.unit, sets: prefillSets(count, await lastSetsFor(exerciseId, before)) };
 }
 
 /** Starts a workout from a routine (pre-filled) or empty. Only one can be in progress. */

@@ -177,15 +177,19 @@ function SetRow({
   );
 }
 
+type EntryMenu = { open: boolean; first: boolean; last: boolean; onToggle: () => void; onSwap: () => void; onMove: (by: -1 | 1) => void; onRemove: () => void };
+
 function EntryCard({
   entry,
   exercise,
   last,
+  menu,
   onChange,
 }: {
   entry: WorkoutEntry;
   exercise: Exercise | undefined;
   last: WorkoutSet[] | null | undefined;
+  menu: EntryMenu;
   onChange: (entry: WorkoutEntry) => void;
 }) {
   const name = exercise?.name ?? 'Exercise';
@@ -206,11 +210,38 @@ function EntryCard({
   };
   return (
     <section aria-label={name} className={`${card} space-y-2 p-3`}>
-      <div>
-        <h2 className="font-semibold">{name}</h2>
-        {entry.target && <p className="text-sm text-zinc-600">{formatTarget(entry.target)}</p>}
-        {last && last.length > 0 && <p className="text-sm text-zinc-500">{`Last: ${formatLast(last)}`}</p>}
+      <div className="flex items-start gap-2">
+        <div className="min-w-0 flex-1">
+          <h2 className="font-semibold">{name}</h2>
+          {entry.target && <p className="text-sm text-zinc-600">{formatTarget(entry.target)}</p>}
+          {last && last.length > 0 && <p className="text-sm text-zinc-500">{`Last: ${formatLast(last)}`}</p>}
+        </div>
+        <button
+          type="button"
+          aria-label={`Options for ${name}`}
+          aria-expanded={menu.open}
+          className="-mt-1 -mr-1 flex size-11 shrink-0 items-center justify-center rounded-xl text-xl text-zinc-500"
+          onClick={menu.onToggle}
+        >
+          ⋯
+        </button>
       </div>
+      {menu.open && (
+        <div className="grid grid-cols-2 gap-2">
+          <button type="button" className={btnSecondary} onClick={menu.onSwap}>
+            Swap
+          </button>
+          <button type="button" className={btnDanger} onClick={menu.onRemove}>
+            Remove
+          </button>
+          <button type="button" className={btnSecondary} disabled={menu.first} onClick={() => menu.onMove(-1)}>
+            Move up
+          </button>
+          <button type="button" className={btnSecondary} disabled={menu.last} onClick={() => menu.onMove(1)}>
+            Move down
+          </button>
+        </div>
+      )}
       {exercise && <NoteBox exercise={exercise} />}
       <ul className="space-y-1.5">
         {entry.sets.map((s, i) => (
@@ -247,6 +278,8 @@ export function WorkoutScreen() {
   const latest = useRef<Workout | null>(null);
   const saving = useRef<Promise<unknown>>(Promise.resolve());
   const [dialog, setDialog] = useState<'discard' | 'delete' | null>(null);
+  const [menuFor, setMenuFor] = useState<string | null>(null);
+  const [removing, setRemoving] = useState<WorkoutEntry | null>(null);
   const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
@@ -297,6 +330,23 @@ export function WorkoutScreen() {
     navigate(`/workout/${w.id}/recap`, { replace: true });
   }
 
+  /** Leaves for another screen once every change is saved, so that screen reads the latest workout. */
+  async function go(path: string) {
+    await saving.current;
+    navigate(path);
+  }
+
+  function move(entryId: string, by: -1 | 1) {
+    update((w) => {
+      const i = w.entries.findIndex((e) => e.id === entryId);
+      const j = i + by;
+      if (i < 0 || j < 0 || j >= w.entries.length) return w;
+      const entries = [...w.entries];
+      [entries[i], entries[j]] = [entries[j]!, entries[i]!];
+      return { ...w, entries };
+    });
+  }
+
   async function remove() {
     const w = latest.current;
     if (!w) return;
@@ -331,15 +381,27 @@ export function WorkoutScreen() {
         ) : undefined
       }
     >
-      {workout.entries.map((entry) => (
+      {workout.entries.map((entry, i) => (
         <EntryCard
           key={entry.id}
           entry={entry}
           exercise={exercises?.get(entry.exerciseId)}
           last={last?.get(entry.exerciseId)}
+          menu={{
+            open: menuFor === entry.id,
+            first: i === 0,
+            last: i === workout.entries.length - 1,
+            onToggle: () => setMenuFor(menuFor === entry.id ? null : entry.id),
+            onSwap: () => void go(`/workout/${workout.id}/swap/${entry.id}`),
+            onMove: (by) => move(entry.id, by),
+            onRemove: () => setRemoving(entry),
+          }}
           onChange={(next) => update((w) => ({ ...w, entries: w.entries.map((e) => (e.id === next.id ? next : e)) }))}
         />
       ))}
+      <button type="button" className={`${btnSecondary} w-full`} onClick={() => void go(`/workout/${workout.id}/add`)}>
+        + Add exercise
+      </button>
 
       {!inProgress && (
         <section className={`${card} space-y-3 p-4`}>
@@ -374,6 +436,19 @@ export function WorkoutScreen() {
         </section>
       )}
 
+      {removing && (
+        <ConfirmDialog
+          title={`Remove ${exercises?.get(removing.exerciseId)?.name ?? 'this exercise'} from this workout?`}
+          confirmLabel="Remove"
+          onCancel={() => setRemoving(null)}
+          onConfirm={() => {
+            const gone = removing.id;
+            update((w) => ({ ...w, entries: w.entries.filter((e) => e.id !== gone) }));
+            setRemoving(null);
+            setMenuFor(null);
+          }}
+        />
+      )}
       {dialog === 'discard' && (
         <ConfirmDialog
           title="Nothing is ticked"

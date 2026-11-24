@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import type { FoodDraft } from '../../data/openFoodFacts';
 import { db } from '../../db/db';
 import { deleteFood, getFood, saveFood } from '../../db/foods';
 import type { Food, FoodLike } from '../../db/types';
 import { normalizeBarcode } from '../../domain/barcode';
+import { resolveBarcode, scanDestination } from '../../scan/resolve';
 import { NUTRIENT_KEYS, parseAmount, type Basis, type NutrientKey, type Nutrients, type Serving } from '../../domain/nutrients';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Field, Screen } from '../components/ui';
@@ -17,11 +18,13 @@ type ServingRow = { label: string; grams: string };
 /** Why New food was opened from a scan without a product to check. */
 type ScanReason = 'not-found' | 'offline' | 'error';
 
+const STILL_NO_ANSWER = 'Still no answer from Open Food Facts. Try again in a moment, or type the label in.';
+
 const NOTES: Record<'draft' | ScanReason, string> = {
   draft: 'From Open Food Facts. Anyone can edit it, so check the values against the package.',
   'not-found': "This barcode isn't in Open Food Facts. Type the label in once and the next scan will find it.",
-  offline: "This barcode couldn't be looked up right now. Type the label in, or scan it again later.",
-  error: "This barcode couldn't be looked up right now. Type the label in, or scan it again later.",
+  offline: "This barcode couldn't be looked up right now. Tap Try again, or type the label in.",
+  error: "This barcode couldn't be looked up right now. Tap Try again, or type the label in.",
 };
 
 /**
@@ -48,7 +51,24 @@ function FoodForm({
   const navigate = useNavigate();
   const source = existing ?? template ?? draft;
   const knownBarcode = existing?.barcode ?? draft?.barcode ?? barcode ?? undefined;
-  const note = draft ? NOTES.draft : reason ? NOTES[reason] : null;
+  const [retry, setRetry] = useState<'idle' | 'busy' | 'failed'>('idle');
+  const retryLookup = useRef<AbortController | null>(null);
+  useEffect(() => () => retryLookup.current?.abort(), []);
+  const canRetry = !draft && (reason === 'offline' || reason === 'error') && barcode !== null && mealId !== null;
+  const note = draft ? NOTES.draft : retry === 'failed' ? STILL_NO_ANSWER : reason ? NOTES[reason] : null;
+
+  /** Looks the scanned barcode up again, and goes wherever the answer leads, as a scan would. */
+  async function tryAgain() {
+    if (!barcode || !mealId) return;
+    const controller = new AbortController();
+    retryLookup.current = controller;
+    setRetry('busy');
+    const outcome = await resolveBarcode(barcode, undefined, controller.signal);
+    if (controller.signal.aborted) return; // the person left meanwhile
+    if (outcome.kind === 'offline' || outcome.kind === 'error') return setRetry('failed');
+    const { to, state } = scanDestination(mealId, barcode, outcome);
+    navigate(to, { replace: true, state });
+  }
   const [name, setName] = useState(source?.name ?? '');
   const [brand, setBrand] = useState(source && 'brand' in source ? (source.brand ?? '') : '');
   const [basis, setBasis] = useState<Basis>(source?.basis ?? '100g');
@@ -119,9 +139,14 @@ function FoodForm({
   return (
     <Screen title={draft ? 'Check the label' : existing ? 'Edit food' : 'New food'} back={back}>
       {note && (
-        <p role="note" className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900 ring-1 ring-amber-200">
-          {note}
-        </p>
+        <div className="space-y-2 rounded-xl bg-amber-50 p-3 text-sm text-amber-900 ring-1 ring-amber-200">
+          <p role="note">{note}</p>
+          {canRetry && (
+            <button type="button" className={`${btnSecondary} w-full`} disabled={retry === 'busy'} onClick={() => void tryAgain()}>
+              {retry === 'busy' ? 'Looking up…' : 'Try again'}
+            </button>
+          )}
+        </div>
       )}
       <Field label="Name">
         <input className={input} value={name} onChange={(e) => { setName(e.target.value); setError(''); }} />

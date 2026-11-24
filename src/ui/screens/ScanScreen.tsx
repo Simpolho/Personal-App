@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { normalizeTypedBarcode } from '../../domain/barcode';
-import { resolveBarcode } from '../../scan/resolve';
+import { resolveBarcode, scanDestination } from '../../scan/resolve';
 import { CameraError, startScanning } from '../../scan/scanner';
 import { Field, Screen } from '../components/ui';
 import { btnPrimary, btnSecondary, errorText, input } from '../styles';
@@ -12,6 +12,9 @@ type Phase =
   | { kind: 'looking-up'; code: string }
   | { kind: 'camera-error'; error: 'denied' | 'unavailable' | 'reader' }
   | { kind: 'stopped' };
+
+/** After this long without an answer, the screen says Open Food Facts is slow. */
+const SLOW_AFTER_MS = 4000;
 
 const CAMERA_ERRORS = {
   denied: "The camera isn't allowed. Tap Try again and choose Allow, or type the barcode below.",
@@ -34,6 +37,16 @@ export function ScanScreen() {
   const wantCamera = useRef(true);
   const lookup = useRef<AbortController | null>(null);
   const [phase, setPhase] = useState<Phase>({ kind: 'starting' });
+  const [slow, setSlow] = useState(false);
+  const lookingUp = phase.kind === 'looking-up';
+
+  // Open Food Facts can take 10 seconds or more at busy times: say so, so the wait doesn't look frozen.
+  useEffect(() => {
+    setSlow(false);
+    if (!lookingUp) return;
+    const timer = setTimeout(() => setSlow(true), SLOW_AFTER_MS);
+    return () => clearTimeout(timer);
+  }, [lookingUp]);
   const [typed, setTyped] = useState('');
   const [typedError, setTypedError] = useState('');
 
@@ -52,13 +65,8 @@ export function ScanScreen() {
       lookup.current = controller;
       const outcome = await resolveBarcode(code, undefined, controller.signal);
       if (!alive.current) return; // the person left while it was looking: stay where they went
-      if (outcome.kind === 'saved') {
-        navigate(`/meal/${mealId}/add/${outcome.food.id}`, { replace: true });
-      } else if (outcome.kind === 'found') {
-        navigate(`/foods/new?meal=${mealId}&barcode=${code}`, { replace: true, state: { draft: outcome.draft } });
-      } else {
-        navigate(`/foods/new?meal=${mealId}&barcode=${code}&reason=${outcome.kind}`, { replace: true });
-      }
+      const { to, state } = scanDestination(mealId, code, outcome);
+      navigate(to, { replace: true, state });
     },
     [mealId, navigate, stopCamera],
   );
@@ -140,6 +148,7 @@ export function ScanScreen() {
         {phase.kind !== 'scanning' && phase.kind !== 'starting' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/70 p-6 text-center text-white">
             {phase.kind === 'looking-up' && <p role="status">{`Looking up ${phase.code}…`}</p>}
+            {phase.kind === 'looking-up' && slow && <p className="text-sm text-white/80">Open Food Facts is slow right now, still looking…</p>}
             {phase.kind === 'camera-error' && (
               <>
                 <p role="alert">{CAMERA_ERRORS[phase.error]}</p>

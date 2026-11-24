@@ -84,6 +84,7 @@ test('a product Open Food Facts does not have opens New food with the barcode', 
   renderAt(`#/meal/${meal.id}/scan`);
   expect(await screen.findByRole('heading', { name: 'New food' })).toBeInTheDocument();
   expect(screen.getByText(/isn't in Open Food Facts/)).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull();
 });
 test('a refused camera explains itself and still lets you type the barcode', async () => {
   camera.mode = { kind: 'deny' };
@@ -175,4 +176,42 @@ test('if barcodes cannot be read at all, the screen says so and offers typing', 
   expect(await screen.findByText(/Barcodes can't be read right now/)).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
   expect(screen.getByLabelText('Barcode')).toBeInTheDocument();
+});
+test('a slow lookup says so after a few seconds and keeps waiting', async () => {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'], shouldAdvanceTime: true });
+  fetchMock.mockImplementation(() => new Promise<Response>(() => {}));
+  camera.mode = { kind: 'codes', codes: ['3017624010701'] };
+  renderAt(`#/meal/${meal.id}/scan`);
+  expect(await screen.findByText(/Looking up 3017624010701/)).toBeInTheDocument();
+  expect(screen.queryByText(/Open Food Facts is slow right now/)).toBeNull();
+  await vi.advanceTimersByTimeAsync(4_000);
+  expect(await screen.findByText('Open Food Facts is slow right now, still looking…')).toBeInTheDocument();
+  expect(screen.getByText(/Looking up 3017624010701/)).toBeInTheDocument();
+});
+test('when the lookup fails, Try again looks the same barcode up again', async () => {
+  fetchMock.mockImplementationOnce(async () => {
+    throw new TypeError('Load failed');
+  });
+  camera.mode = { kind: 'codes', codes: ['3017624010701'] };
+  renderAt(`#/meal/${meal.id}/scan`);
+  expect(await screen.findByRole('heading', { name: 'New food' })).toBeInTheDocument();
+  expect(screen.getByText(/couldn't be looked up right now/)).toBeInTheDocument();
+  respond(nutella);
+  await user.click(screen.getByRole('button', { name: 'Try again' }));
+  expect(await screen.findByRole('heading', { name: 'Check the label' })).toBeInTheDocument();
+  expect(screen.getByLabelText('Name')).toHaveValue('Nutella');
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+  expect(String(fetchMock.mock.calls[1]?.[0])).toContain('/product/3017624010701?');
+});
+test('Try again that fails again says so, and can be tapped again', async () => {
+  fetchMock.mockImplementation(async () => {
+    throw new TypeError('Load failed');
+  });
+  camera.mode = { kind: 'codes', codes: ['3017624010701'] };
+  renderAt(`#/meal/${meal.id}/scan`);
+  await user.click(await screen.findByRole('button', { name: 'Try again' }));
+  expect(await screen.findByText('Still no answer from Open Food Facts. Try again in a moment, or type the label in.')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Try again' })).toBeEnabled();
+  expect(screen.getByRole('heading', { name: 'New food' })).toBeInTheDocument();
+  expect(fetchMock).toHaveBeenCalledTimes(2);
 });

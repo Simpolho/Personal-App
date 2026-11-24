@@ -70,6 +70,9 @@ export function offProductToDraft(product: Record<string, unknown>, code: string
   };
 }
 
+/** How long a lookup waits for Open Food Facts, which at busy times takes 10 seconds or more to answer. */
+export const LOOKUP_TIMEOUT_MS = 20_000;
+
 /**
  * Looks a barcode up in Open Food Facts. Never throws; gives up after `timeoutMs`, or as soon as
  * `signal` aborts (the person left the screen).
@@ -77,7 +80,7 @@ export function offProductToDraft(product: Record<string, unknown>, code: string
 export async function lookupOpenFoodFacts(
   code: string,
   fetchFn: typeof fetch = fetch,
-  timeoutMs = 8000,
+  timeoutMs = LOOKUP_TIMEOUT_MS,
   signal?: AbortSignal,
 ): Promise<LookupResult> {
   if (typeof navigator !== 'undefined' && navigator.onLine === false) return { kind: 'offline' };

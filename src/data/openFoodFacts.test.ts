@@ -63,6 +63,20 @@ test('a server that never answers gives up', async () => {
     new Promise((_resolve, reject) => init?.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError'))))) as unknown as typeof fetch;
   expect(await lookupOpenFoodFacts('3017624010701', hangs, 20)).toEqual({ kind: 'offline' });
 });
+test('a slow server is waited for up to 20 seconds, then given up on', async () => {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+  const hangs = ((_url: string, init?: RequestInit) =>
+    new Promise((_resolve, reject) => init?.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError'))))) as unknown as typeof fetch;
+  let settled = false;
+  const result = lookupOpenFoodFacts('3017624010701', hangs).then((r) => {
+    settled = true;
+    return r;
+  });
+  await vi.advanceTimersByTimeAsync(19_000);
+  expect(settled).toBe(false);
+  await vi.advanceTimersByTimeAsync(1_000);
+  expect(await result).toEqual({ kind: 'offline' });
+});
 test('with the phone offline, nothing is fetched', async () => {
   vi.stubGlobal('navigator', { ...navigator, onLine: false });
   const fetchFn = vi.fn() as unknown as typeof fetch;

@@ -32,11 +32,13 @@ function ExerciseForm({ existing }: { existing: Exercise | null }) {
     if ((await listExercises()).some((e) => e.id !== existing?.id && fold(e.name) === fold(trimmed))) {
       return setError(`There's already an exercise called ${trimmed}`);
     }
+    // Kept even when the unit isn't plates any more, so sets logged in plates still count.
     let plateWeight: Exercise['plateWeight'];
-    if (unit === 'plates' && plateValue.trim() !== '') {
+    if (plateValue.trim() !== '') {
       const value = parseLift(plateValue);
-      if (value === null || value === 0) return setError('Enter what one plate weighs, or leave it empty');
-      plateWeight = { value, unit: plateUnit };
+      if (value === null || value === 0) {
+        if (unit === 'plates') return setError('Enter what one plate weighs, or leave it empty');
+      } else plateWeight = { value, unit: plateUnit };
     }
     await saveExercise({ name: trimmed, muscle, unit, ...(plateWeight ? { plateWeight } : {}), eachSide, note: note.trim() }, existing?.id);
     navigate(BACK);

@@ -19,12 +19,11 @@ export const RPE_VALUES = [6, 7, 8, 9, 10] as const;
 
 const KG_PER_LB = 0.45359237;
 
-/** A typed weight: 0 or more, at most 2 decimals, decimal comma accepted. */
+/** A typed weight: 0 or more, at most 2 decimals, decimal comma accepted. Checked on the text, not the float. */
 export function parseLift(input: string): number | null {
-  const value = parseAmount(input, { allowZero: true });
-  if (value === null || value < 0) return null;
-  if (Math.round(value * 100) !== value * 100) return null;
-  return value;
+  const text = input.trim().replace(',', '.');
+  if (!/^(\d+(\.\d{1,2})?|\.\d{1,2})$/.test(text)) return null;
+  return Number(text);
 }
 
 /** Typed reps: a whole number from 1 to 100. */
@@ -59,6 +58,15 @@ export function setKg(
     case 'bodyweight':
       return bodyKg === null ? null : bodyKg + w;
   }
+}
+
+/**
+ * The Finish rule: only ticked sets are kept, entries left with none are dropped, and the workout
+ * gets its finish time. Null when nothing is ticked.
+ */
+export function finishedVersion(w: Workout, finishedAt: string): Workout | null {
+  const entries = w.entries.map((e) => ({ ...e, sets: e.sets.filter((s) => s.done) })).filter((e) => e.sets.length > 0);
+  return entries.length === 0 ? null : { ...w, entries, finishedAt };
 }
 
 /** Done, not a warm-up, and with reps: the sets that count. */

@@ -205,3 +205,78 @@ test('a finished workout can be corrected, moved to another date, or deleted', a
   await waitFor(() => expect(window.location.hash).toBe('#/workouts'));
   expect((await stored(done!.id)).deletedAt).toBeDefined();
 });
+test('a save that fails is shown, can be retried, and Finish keeps what the screen shows', async () => {
+  const w = await start();
+  renderAt(`#/workout/${w.id}`);
+  const b = within(await exerciseRegion('Bench'));
+  await user.type(b.getByLabelText('Set 1 reps'), '8');
+  await user.click(b.getByRole('button', { name: 'Done set 1' }));
+  await waitFor(async () => expect((await stored(w.id)).entries[0]?.sets[0]?.done).toBe(true));
+  await user.clear(b.getByLabelText('Set 2 reps'));
+  await user.type(b.getByLabelText('Set 2 reps'), '7');
+  await waitFor(async () => expect((await stored(w.id)).entries[0]?.sets[1]?.reps).toBe(7));
+  const put = vi.spyOn(db.workouts, 'put').mockRejectedValueOnce(new Error('connection closed'));
+  await user.click(b.getByRole('button', { name: 'Done set 2' }));
+  expect(await screen.findByText('Not saved')).toBeInTheDocument();
+  put.mockRestore();
+  await user.click(screen.getByRole('button', { name: 'Finish' }));
+  await waitFor(() => expect(window.location.hash).toBe(`#/workout/${w.id}/recap`));
+  const saved = await stored(w.id);
+  expect(saved.finishedAt).toBeDefined();
+  expect(saved.entries[0]?.sets.map((s) => s.reps)).toEqual([8, 7]);
+});
+
+test('Retry saves the latest sets after a failed save', async () => {
+  const w = await start();
+  renderAt(`#/workout/${w.id}`);
+  const b = within(await exerciseRegion('Bench'));
+  await waitFor(async () => expect(await stored(w.id)).toBeDefined());
+  const put = vi.spyOn(db.workouts, 'put').mockRejectedValueOnce(new Error('connection closed'));
+  await user.click(b.getByRole('button', { name: 'Done set 1' }));
+  await screen.findByText('Not saved');
+  put.mockRestore();
+  await user.click(screen.getByRole('button', { name: 'Retry' }));
+  await waitFor(() => expect(screen.queryByText('Not saved')).toBeNull());
+  expect((await stored(w.id)).entries[0]?.sets[0]?.done).toBe(true);
+});
+
+test('ticking sets does not look through past workouts again', async () => {
+  await history();
+  const w = await start();
+  renderAt(`#/workout/${w.id}`);
+  const b = within(await exerciseRegion('Bench'));
+  await b.findByText('Last: 25×8, 25×7');
+  const where = vi.spyOn(db.workouts, 'where');
+  await user.click(b.getByRole('button', { name: 'Done set 1' }));
+  await user.click(b.getByRole('button', { name: 'Done set 2' }));
+  await waitFor(async () => expect((await stored(w.id)).entries[0]?.sets[1]?.done).toBe(true));
+  await new Promise((r) => setTimeout(r, 50));
+  expect(where).not.toHaveBeenCalled();
+  where.mockRestore();
+});
+
+test('removing a ticked set asks first; RPE buttons are full-size tap targets', async () => {
+  const w = await start();
+  renderAt(`#/workout/${w.id}`);
+  const b = within(await exerciseRegion('Bench'));
+  await user.click(b.getByRole('button', { name: 'Done set 1' }));
+  expect(b.getByRole('button', { name: 'RPE 8 for set 1' }).className).toMatch(/min-h-11/);
+  await user.click(b.getByRole('button', { name: 'Remove set 1' }));
+  const dialog = await screen.findByRole('dialog');
+  expect(b.getByLabelText('Set 1 weight')).toBeInTheDocument();
+  await user.click(within(dialog).getByRole('button', { name: 'Remove' }));
+  await waitFor(async () => expect((await stored(w.id)).entries[0]?.sets).toHaveLength(2));
+});
+
+test('a weight typed with a decimal comma is not marked wrong halfway', async () => {
+  const w = await start();
+  renderAt(`#/workout/${w.id}`);
+  const b = within(await exerciseRegion('Bench'));
+  const field = b.getByLabelText('Set 1 weight');
+  await user.clear(field);
+  await user.type(field, '18,');
+  expect(field).not.toHaveAttribute('aria-invalid');
+  await user.type(field, '1');
+  await waitFor(async () => expect((await stored(w.id)).entries[0]?.sets[0]?.weight).toBe(18.1));
+  expect(field).not.toHaveAttribute('aria-invalid');
+});

@@ -74,7 +74,7 @@ test('exercises in a routine can be reordered; bad reps are refused', async () =
   await waitFor(async () => expect((await db.routines.get(routine.id))?.items.map((i) => i.exerciseId)).toEqual([raise.id, bench.id]));
 });
 
-test('a plate machine keeps its plate weight; another unit clears it', async () => {
+test('a plate machine keeps its plate weight, even after switching to another unit', async () => {
   const view = renderAt(`#/exercises/${bench.id}`);
   expect(await screen.findByLabelText('Name')).toHaveValue('Bench');
   expect(screen.queryByLabelText('1 plate =')).toBeNull();
@@ -94,7 +94,8 @@ test('a plate machine keeps its plate weight; another unit clears it', async () 
   expect(screen.queryByLabelText('1 plate =')).toBeNull();
   await user.click(screen.getByRole('button', { name: 'Save' }));
   await waitFor(async () => expect((await db.exercises.get(bench.id))?.unit).toBe('kg'));
-  expect((await db.exercises.get(bench.id))?.plateWeight).toBeUndefined();
+  // Kept, so past sets logged in plates still count toward volume.
+  expect((await db.exercises.get(bench.id))?.plateWeight).toEqual({ value: 5, unit: 'kg' });
 });
 
 test('an exercise a routine uses is not deleted, and says where it is used', async () => {

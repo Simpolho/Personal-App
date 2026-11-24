@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { db } from '../../db/db';
 import { firstEntryAt, getDay, removeEmptyMeals } from '../../db/log';
 import { getTargetsFor } from '../../db/targets';
@@ -96,19 +96,28 @@ function WeightCard({ today }: { today: string }) {
 /** How recently a workout must have been changed for opening the app to go straight back to it. */
 const RESUME_WITHIN_MS = 3 * 60 * 60 * 1000;
 
+/**
+ * Whether this page load has already decided about jumping back into a workout. It's a module
+ * variable, so it starts over only when the app is opened or reloaded, never when the person swipes
+ * back to Home (iOS Home Screen apps move through history with swipes).
+ */
+let launchChecked = false;
+
 /** Where the app opens: today's food, water and weight at a glance. */
 export function HomeScreen() {
   const today = useToday();
-  const location = useLocation();
   const navigate = useNavigate();
-  const active = useLiveQuery(() => getActiveWorkout(), []);
-  // The app was just opened (Home is the first page of this visit, so its key is 'default'): if a
-  // workout was being logged in the last 3 hours, iPhone closed the app mid-workout; go back to it.
-  const opened = location.key === 'default';
+  // Wrapped so "still loading" (undefined) differs from "no workout in progress".
+  const loaded = useLiveQuery(async () => ({ active: await getActiveWorkout() }), []);
+  const active = loaded?.active;
+  // On the first Home of a page load: if a workout was changed in the last 3 hours, iPhone closed
+  // the app mid-workout, so go back to it.
   useEffect(() => {
-    if (!opened || !active) return;
-    if (Date.now() - new Date(active.updatedAt).getTime() < RESUME_WITHIN_MS) navigate(`/workout/${active.id}`, { replace: true });
-  }, [opened, active, navigate]);
+    if (launchChecked || loaded === undefined) return;
+    launchChecked = true;
+    const w = loaded.active;
+    if (w && Date.now() - new Date(w.updatedAt).getTime() < RESUME_WITHIN_MS) navigate(`/workout/${w.id}`, { replace: true });
+  }, [loaded, navigate]);
   // A meal left with nothing in it (New meal, then back) doesn't stay on the day.
   useEffect(() => {
     void removeEmptyMeals(today);

@@ -4,8 +4,9 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { db } from '../../db/db';
 import { isLive } from '../../db/records';
 import type { Exercise, Workout, WorkoutEntry, WorkoutSet } from '../../db/types';
-import { deleteWorkout, finishWorkout, lastSetsFor, saveWorkout, setExerciseNote } from '../../db/workouts';
-import { formatElapsed, formatLast, formatTarget, parseLift, parseReps, RPE_VALUES } from '../../domain/workouts';
+import { deleteWorkout, lastSetsFor, saveWorkout, setExerciseNote } from '../../db/workouts';
+import { nowIso } from '../../domain/dates';
+import { finishedVersion, formatElapsed, formatLast, formatTarget, parseLift, parseReps, RPE_VALUES } from '../../domain/workouts';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Field, Screen } from '../components/ui';
 import { btnDanger, btnDone, btnSecondary, card, input } from '../styles';
@@ -66,6 +67,8 @@ function NumberBox({
         const next = e.target.value;
         setText(next);
         if (next.trim() === '') return setInvalid(false);
+        // "22," is a number still being typed, not a wrong one.
+        if (/^\d+[.,]$/.test(next.trim())) return setInvalid(false);
         const parsed = parse(next);
         setInvalid(parsed === null);
         if (parsed !== null && parsed !== value) onValue(parsed);
@@ -98,6 +101,10 @@ function NoteBox({ exercise }: { exercise: Exercise }) {
 
 const UNIT_LABEL = { kg: 'kg', lb: 'lb', plates: 'pl', bodyweight: 'kg' } as const;
 
+/** A weight or reps box in a set row: its own width (the shared input class is full width). */
+const setBox =
+  'min-h-11 min-w-0 shrink rounded-xl border-0 bg-white px-1 text-center text-base text-zinc-900 ring-1 ring-zinc-300 focus:outline-none focus:ring-2 focus:ring-emerald-600';
+
 function SetRow({
   set,
   label,
@@ -123,7 +130,7 @@ function SetRow({
           value={set.weight}
           parse={parseLift}
           inputMode="decimal"
-          className={`${input} w-20 px-2 text-center`}
+          className={`${setBox} w-[4.25rem]`}
           onValue={(weight) => onChange({ ...set, weight })}
         />
         <span className="w-5 shrink-0 text-sm text-zinc-500">{UNIT_LABEL[unit]}</span>
@@ -133,7 +140,7 @@ function SetRow({
           value={set.reps}
           parse={parseReps}
           inputMode="numeric"
-          className={`${input} w-16 px-2 text-center`}
+          className={`${setBox} w-14`}
           onValue={(reps) => onChange({ ...set, reps })}
         />
         <button
@@ -157,7 +164,7 @@ function SetRow({
         </button>
       </div>
       {set.done && !set.warmup && (
-        <div className="flex items-center gap-1 pl-8">
+        <div className="flex items-center gap-1.5 pl-8">
           <span className="mr-1 text-xs text-zinc-500">RPE</span>
           {RPE_VALUES.map((v) => (
             <button
@@ -165,7 +172,7 @@ function SetRow({
               type="button"
               aria-label={`RPE ${v} for ${label.toLowerCase()}`}
               aria-pressed={set.rpe === v}
-              className={`min-h-9 min-w-9 rounded-lg text-sm font-medium ${set.rpe === v ? 'bg-zinc-900 text-white' : 'bg-zinc-100 text-zinc-700'}`}
+              className={`min-h-11 min-w-11 rounded-lg text-sm font-medium ${set.rpe === v ? 'bg-zinc-900 text-white' : 'bg-zinc-100 text-zinc-700'}`}
               onClick={() => onChange({ ...set, rpe: set.rpe === v ? undefined : v })}
             >
               {v}
@@ -198,6 +205,8 @@ function EntryCard({
     return s.warmup ? `Warm-up ${n}` : `Set ${n}`;
   });
   const setAt = (i: number, next: WorkoutSet) => onChange({ ...entry, sets: entry.sets.map((s, j) => (j === i ? next : s)) });
+  const [confirmRemove, setConfirmRemove] = useState<number | null>(null);
+  const removeAt = (i: number) => onChange({ ...entry, sets: entry.sets.filter((_, j) => j !== i) });
   const addSet = () => {
     const from = [...entry.sets].reverse().find((s) => !s.warmup);
     onChange({ ...entry, sets: [...entry.sets, { id: crypto.randomUUID(), warmup: false, done: false, weight: from?.weight, reps: from?.reps }] });
@@ -251,10 +260,22 @@ function EntryCard({
             label={labels[i]!}
             unit={entry.unit}
             onChange={(next) => setAt(i, next)}
-            onRemove={() => onChange({ ...entry, sets: entry.sets.filter((_, j) => j !== i) })}
+            onRemove={() => (s.done ? setConfirmRemove(i) : removeAt(i))}
           />
         ))}
       </ul>
+      {confirmRemove !== null && (
+        <ConfirmDialog
+          title={`Remove ${labels[confirmRemove]?.toLowerCase() ?? 'this set'} of ${name}?`}
+          message="It's ticked as done."
+          confirmLabel="Remove"
+          onCancel={() => setConfirmRemove(null)}
+          onConfirm={() => {
+            removeAt(confirmRemove);
+            setConfirmRemove(null);
+          }}
+        />
+      )}
       <div className="grid grid-cols-2 gap-2">
         <button type="button" className={btnSecondary} onClick={addSet}>
           + Set
@@ -277,6 +298,9 @@ export function WorkoutScreen() {
   const [workout, setWorkout] = useState<Workout | null | undefined>(undefined);
   const latest = useRef<Workout | null>(null);
   const saving = useRef<Promise<unknown>>(Promise.resolve());
+  const failed = useRef(false);
+  const finishing = useRef(false);
+  const [unsaved, setUnsaved] = useState(false);
   const [dialog, setDialog] = useState<'discard' | 'delete' | null>(null);
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [removing, setRemoving] = useState<WorkoutEntry | null>(null);
@@ -303,32 +327,81 @@ export function WorkoutScreen() {
   }, [inProgress]);
 
   const exercises = useLiveQuery(async () => new Map((await db.exercises.toArray()).map((e) => [e.id, e])), []);
-  const idsKey = workout ? [...new Set(workout.entries.map((e) => e.exerciseId))].join(',') : '';
-  const last = useLiveQuery(async () => {
-    if (!workout) return new Map<string, WorkoutSet[] | null>();
-    const ids = idsKey ? idsKey.split(',') : [];
-    const found = await Promise.all(ids.map(async (e) => [e, await lastSetsFor(e, workout.startedAt, workout.id)] as const));
-    return new Map(found);
-    // Last time only changes with the exercises in the workout and when it started.
-  }, [idsKey, workout?.startedAt, workout?.id]);
+  // Looked up when the workout's exercises (or its start) change, not on every tap: it reads
+  // every past workout with each exercise.
+  const [last, setLast] = useState<Map<string, WorkoutSet[] | null>>(new Map());
+  const unitsKey = workout ? workout.entries.map((e) => `${e.exerciseId}:${e.unit}`).join(',') : '';
+  const startedAt = workout?.startedAt;
+  useEffect(() => {
+    if (!startedAt || !unitsKey) return;
+    let cancelled = false;
+    void Promise.all(
+      [...new Set(unitsKey.split(','))].map(async (key) => {
+        const [exerciseId, unit] = key.split(':') as [string, WorkoutEntry['unit']];
+        return [exerciseId, await lastSetsFor(exerciseId, startedAt, id, unit)] as const;
+      }),
+    ).then((found) => {
+      if (!cancelled) setLast(new Map(found));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [unitsKey, startedAt, id]);
+
+  /** Saves a copy of the workout after the saves before it. A failure is shown, and kept for Retry. */
+  function enqueue(copy: Workout) {
+    saving.current = saving.current
+      .then(() => saveWorkout(copy))
+      .then(
+        () => {
+          failed.current = false;
+          setUnsaved(false);
+        },
+        (error: unknown) => {
+          console.error('Could not save the workout', error);
+          failed.current = true;
+          setUnsaved(true);
+        },
+      );
+  }
 
   function update(change: (w: Workout) => Workout) {
     const current = latest.current;
-    if (!current) return;
+    if (!current || finishing.current) return;
     const next = change(current);
     latest.current = next;
     setWorkout(next);
-    saving.current = saving.current.then(() => saveWorkout(next)).catch((error: unknown) => console.error('Could not save the workout', error));
+    enqueue(next);
   }
+
+  function retry() {
+    if (latest.current) enqueue(latest.current);
+  }
+
+  // Coming back to the app retries a save that failed (iOS can close the database while locked).
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== 'hidden' && failed.current) retry();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
 
   async function finish() {
     const w = latest.current;
-    if (!w) return;
-    if (!w.entries.some((e) => e.sets.some((s) => s.done))) return setDialog('discard');
-    await saving.current;
+    if (!w || finishing.current) return;
     // Logged afterwards (started well before it was created): its length isn't known.
     const loggedAfter = new Date(w.createdAt).getTime() - new Date(w.startedAt).getTime() > 60 * 60_000;
-    await finishWorkout(w.id, loggedAfter ? w.startedAt : undefined);
+    const finished = finishedVersion(w, loggedAfter ? w.startedAt : nowIso());
+    if (!finished) return setDialog('discard');
+    // From the screen's own copy, through the same queue, so a save that failed earlier can't lose sets.
+    finishing.current = true;
+    enqueue(finished);
+    await saving.current;
+    if (failed.current) {
+      finishing.current = false;
+      return;
+    }
     navigate(`/workout/${w.id}/recap`, { replace: true });
   }
 
@@ -383,6 +456,17 @@ export function WorkoutScreen() {
         ) : undefined
       }
     >
+      {unsaved && (
+        <div role="alert" className="flex items-center justify-between gap-3 rounded-xl bg-red-50 p-3 text-sm text-red-900 ring-1 ring-red-200">
+          <span>
+            <strong>Not saved</strong>
+            <span className="block">Your last change couldn't be saved.</span>
+          </span>
+          <button type="button" className={btnSecondary} onClick={retry}>
+            Retry
+          </button>
+        </div>
+      )}
       {workout.entries.map((entry, i) => (
         <EntryCard
           key={entry.id}

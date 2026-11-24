@@ -91,3 +91,17 @@ test('exercises can be moved and removed', async () => {
   await waitFor(async () => expect(await order()).toEqual(['Raise']));
   expect(screen.queryByRole('region', { name: 'Bench' })).toBeNull();
 });
+test('swapping an exercise that already has ticked sets keeps them, and adds the new one after it', async () => {
+  renderAt(`#/workout/${w.id}`);
+  const b = within(await screen.findByRole('region', { name: 'Bench' }));
+  await user.type(b.getByLabelText('Set 1 reps'), '8');
+  await user.click(b.getByRole('button', { name: 'Done set 1' }));
+  await user.click(screen.getByRole('button', { name: 'Options for Bench' }));
+  await user.click(screen.getByRole('button', { name: 'Swap' }));
+  await user.click(await screen.findByRole('button', { name: 'Chest press' }));
+  await screen.findByRole('region', { name: 'Chest press' });
+  expect(await order()).toEqual(['Bench', 'Chest press', 'Raise']);
+  const saved = await db.workouts.get(w.id);
+  expect(saved!.entries[0]!.sets.map((s) => [s.weight, s.reps, s.done])).toEqual([[22.5, 8, true]]);
+  expect(saved!.entries[1]!.sets).toHaveLength(3);
+});

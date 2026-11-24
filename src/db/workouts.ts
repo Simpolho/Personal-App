@@ -1,8 +1,8 @@
 import { nowIso } from '../domain/dates';
-import { isWorkingSet, prefillSets } from '../domain/workouts';
+import { finishedVersion, isWorkingSet, prefillSets } from '../domain/workouts';
 import { db } from './db';
 import { isLive, newRecord, softDeleted, touched } from './records';
-import type { BaseRecord, Exercise, Routine, Workout, WorkoutEntry, WorkoutSet } from './types';
+import type { BaseRecord, Exercise, Routine, WeightUnit, Workout, WorkoutEntry, WorkoutSet } from './types';
 
 export type ExerciseFields = Omit<Exercise, keyof BaseRecord>;
 export type RoutineFields = Omit<Routine, keyof BaseRecord>;
@@ -65,14 +65,15 @@ export async function getActiveWorkout(): Promise<Workout | undefined> {
 
 /**
  * The working sets of `exerciseId` in the most recent finished workout that started before
- * `before` and has any, in whichever routine. Null when there is none.
+ * `before` and has any, in whichever routine, logged in `unit` when given. Null when there is none.
  */
-export async function lastSetsFor(exerciseId: string, before: string, excludeId?: string): Promise<WorkoutSet[] | null> {
+export async function lastSetsFor(exerciseId: string, before: string, excludeId?: string, unit?: WeightUnit): Promise<WorkoutSet[] | null> {
   const candidates = (await db.workouts.where('exerciseIds').equals(exerciseId).distinct().toArray())
     .filter((w) => finished(w) && w.startedAt < before && w.id !== excludeId)
     .sort((a, b) => b.startedAt.localeCompare(a.startedAt));
   for (const w of candidates) {
-    const sets = w.entries.filter((e) => e.exerciseId === exerciseId).flatMap((e) => e.sets.filter(isWorkingSet));
+    // Only sets logged in `unit` (the exercise's unit now): "14" plates isn't 14 kg.
+    const sets = w.entries.filter((e) => e.exerciseId === exerciseId && (unit === undefined || e.unit === unit)).flatMap((e) => e.sets.filter(isWorkingSet));
     if (sets.length > 0) return sets;
   }
   return null;
@@ -82,7 +83,12 @@ export async function lastSetsFor(exerciseId: string, before: string, excludeId?
 export async function newEntry(exerciseId: string, before: string, count = 1): Promise<WorkoutEntry> {
   const exercise = await db.exercises.get(exerciseId);
   if (!exercise) throw new Error('Unknown exercise');
-  return { id: crypto.randomUUID(), exerciseId, unit: exercise.unit, sets: prefillSets(count, await lastSetsFor(exerciseId, before)) };
+  return {
+    id: crypto.randomUUID(),
+    exerciseId,
+    unit: exercise.unit,
+    sets: prefillSets(count, await lastSetsFor(exerciseId, before, undefined, exercise.unit)),
+  };
 }
 
 /** Starts a workout from a routine (pre-filled) or empty. Only one can be in progress. */
@@ -100,7 +106,7 @@ export async function startWorkout(opts: { routineId?: string; date: string; sta
       exerciseId,
       unit: exercise.unit,
       target,
-      sets: prefillSets(item.sets, await lastSetsFor(exerciseId, startedAt), startWeight),
+      sets: prefillSets(item.sets, await lastSetsFor(exerciseId, startedAt, undefined, exercise.unit), startWeight),
     });
   }
   const workout: Workout = newRecord({
@@ -126,9 +132,9 @@ export async function saveWorkout(w: Workout): Promise<Workout> {
 export async function finishWorkout(id: string, finishedAt?: string): Promise<Workout> {
   const w = await db.workouts.get(id);
   if (!w || !isLive(w)) throw new Error('No such workout');
-  const entries = w.entries.map((e) => ({ ...e, sets: e.sets.filter((s) => s.done) })).filter((e) => e.sets.length > 0);
-  if (entries.length === 0) throw new Error('Nothing is ticked');
-  return saveWorkout({ ...w, entries, finishedAt: finishedAt ?? nowIso() });
+  const finished = finishedVersion(w, finishedAt ?? nowIso());
+  if (!finished) throw new Error('Nothing is ticked');
+  return saveWorkout(finished);
 }
 
 export async function deleteWorkout(id: string): Promise<void> {

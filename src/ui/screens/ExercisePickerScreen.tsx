@@ -42,8 +42,11 @@ export function ExercisePickerScreen() {
       if (!old) return navigate(back, { replace: true });
       const count = old.target?.sets ?? Math.max(1, old.sets.filter((s) => !s.warmup).length);
       const entry = await newEntry(exerciseId, w.startedAt, count);
-      const replaced = old.target ? { ...entry, target: old.target } : entry;
-      await saveWorkout({ ...w, entries: w.entries.map((e) => (e.id === entryId ? replaced : e)) });
+      const replacement = old.target ? { ...entry, target: old.target } : entry;
+      const ticked = old.sets.filter((s) => s.done);
+      // Sets already done stay logged: the old exercise keeps them, and the new one comes right after.
+      const entries = w.entries.flatMap((e) => (e.id !== entryId ? [e] : ticked.length > 0 ? [{ ...e, sets: ticked }, replacement] : [replacement]));
+      await saveWorkout({ ...w, entries });
     } else {
       await saveWorkout({ ...w, entries: [...w.entries, await newEntry(exerciseId, w.startedAt)] });
     }

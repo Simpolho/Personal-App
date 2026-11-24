@@ -170,3 +170,21 @@ test('exerciseIds follow the entries; an added entry is pre-filled with one set'
   expect(saved.exerciseIds).toEqual([bench.id]);
   expect(await lastSetsFor(raise.id, w.startedAt)).toHaveLength(1);
 });
+
+test('after an exercise changes unit, last time in the old unit is not used to pre-fill', async () => {
+  const { bench, upperA } = await setup();
+  await saveExercise({ ...bench, unit: 'plates' }, bench.id);
+  at('2026-11-16T10:00:00Z');
+  const old = await startWorkout({ routineId: upperA.id, date: '2026-11-16' });
+  expect(old.entries[0]?.unit).toBe('plates');
+  await tick(old, 0, [[14, 12]]);
+  await finishWorkout(old.id);
+  await saveExercise({ ...bench, unit: 'kg' }, bench.id);
+  at('2026-11-23T10:00:00Z');
+  const next = await startWorkout({ routineId: upperA.id, date: '2026-11-23' });
+  expect(next.entries[0]?.sets.map((s) => [s.weight, s.reps])).toEqual([
+    [22.5, undefined],
+    [22.5, undefined],
+    [22.5, undefined],
+  ]);
+});

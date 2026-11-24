@@ -49,6 +49,9 @@ const workout = (entries: WorkoutEntry[]): Workout => ({
 
 test('weights and reps are parsed from what is typed', () => {
   expect(parseLift('22,5')).toBe(22.5);
+  for (const [text, value] of [['18,1', 18.1], ['2,3', 2.3], ['72,6', 72.6], ['1,1', 1.1], ['4,55', 4.55], ['36.3', 36.3]] as const) {
+    expect(parseLift(text)).toBe(value);
+  }
   expect(parseLift('0')).toBe(0);
   expect(parseLift('1.234')).toBeNull();
   expect(parseLift('-1')).toBeNull();

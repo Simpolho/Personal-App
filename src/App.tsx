@@ -21,7 +21,7 @@ import { WeightScreen } from './ui/screens/WeightScreen';
 import { WorkoutScreen } from './ui/screens/WorkoutScreen';
 import { ExercisePickerScreen } from './ui/screens/ExercisePickerScreen';
 import { RecapScreen } from './ui/screens/RecapScreen';
-import { Screen } from './ui/components/ui';
+import { WorkoutsScreen } from './ui/screens/WorkoutsScreen';
 
 function ToHome() {
   return <Navigate to="/" replace />;
@@ -52,8 +52,7 @@ function Screens() {
         <Route path="/workout/:id/add" element={<ExercisePickerScreen />} />
         <Route path="/workout/:id/swap/:entryId" element={<ExercisePickerScreen />} />
         <Route path="/workout/:id/recap" element={<RecapScreen />} />
-        {/* Placeholder until the Workouts screen (Task 6) exists. */}
-        <Route path="/workouts" element={<Screen title="Workouts" back="/" />} />
+        <Route path="/workouts" element={<WorkoutsScreen />} />
         <Route path="*" element={<ToHome />} />
       </Routes>
     </ErrorBoundary>

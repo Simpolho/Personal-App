@@ -159,3 +159,10 @@ export function routinesForDate(routines: Routine[], date: string): Routine[] {
   const weekday = new Date(y!, m! - 1, d!).getDay();
   return routines.filter((r) => r.weekdays.includes(weekday));
 }
+
+/** Minutes between start and finish; null for one in progress or logged afterwards (start = finish). */
+export function workoutMinutes(w: Pick<Workout, 'startedAt' | 'finishedAt'>): number | null {
+  if (!w.finishedAt) return null;
+  const minutes = Math.round((new Date(w.finishedAt).getTime() - new Date(w.startedAt).getTime()) / 60_000);
+  return minutes > 0 ? minutes : null;
+}

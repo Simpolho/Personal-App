@@ -4,7 +4,7 @@ import { db } from '../../db/db';
 import { isLive } from '../../db/records';
 import { bodyKgOn } from '../../db/weight';
 import { previousRoutineWorkout } from '../../db/workouts';
-import { recapOf, withChanges } from '../../domain/workouts';
+import { recapOf, withChanges, workoutMinutes } from '../../domain/workouts';
 import { Screen } from '../components/ui';
 import { btnDone, card } from '../styles';
 
@@ -45,11 +45,11 @@ export function RecapScreen() {
     );
   }
   const { workout, recap, compared } = data;
-  const minutes = workout.finishedAt ? Math.round((new Date(workout.finishedAt).getTime() - new Date(workout.startedAt).getTime()) / 60_000) : null;
+  const minutes = workoutMinutes(workout);
 
   return (
     <Screen
-      title={minutes === null ? workout.name : `${workout.name} · done · ${minutes} min`}
+      title={minutes === null ? `${workout.name} · done` : `${workout.name} · done · ${minutes} min`}
       back={`/workout/${workout.id}`}
       footer={
         <button type="button" className={`${btnDone} w-full`} onClick={() => navigate('/')}>

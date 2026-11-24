@@ -4,6 +4,7 @@ import { resetDb } from '../../db/db';
 import { createMeal, quickAdd } from '../../db/log';
 import { addWater, waterTotal } from '../../db/water';
 import { logWeight } from '../../db/weight';
+import { saveExercise, saveRoutine, startWorkout } from '../../db/workouts';
 import { renderAt, user } from '../../test/render';
 
 beforeEach(async () => {
@@ -20,7 +21,29 @@ test('the app opens on Home: today, calories, water, weight and the way to the f
   expect(screen.getByRole('link', { name: 'Food log' })).toBeInTheDocument();
   expect(screen.getByRole('link', { name: '+ Log food' })).toBeInTheDocument();
   expect(screen.getByRole('link', { name: 'Settings' })).toBeInTheDocument();
-  expect(screen.queryByText(/Workouts/)).toBeNull();
+  expect(screen.getByRole('link', { name: 'Workouts' })).toHaveAttribute('href', '#/workouts');
+});
+test('opening the app during a workout goes straight back to it; going Home later shows Resume', async () => {
+  const bench = await saveExercise({ name: 'Bench', muscle: 'Chest', unit: 'kg', eachSide: false, note: '' });
+  const routine = await saveRoutine({ name: 'Upper A', weekdays: [1], items: [{ exerciseId: bench.id, sets: 1, repsMin: 8, repsMax: 8, rpeTarget: '' }] });
+  vi.setSystemTime(new Date('2026-11-23T09:50:00Z'));
+  const w = await startWorkout({ routineId: routine.id, date: '2026-11-23' });
+  vi.setSystemTime(new Date('2026-11-23T10:00:00Z'));
+  renderAt('#/');
+  await waitFor(() => expect(window.location.hash).toBe(`#/workout/${w.id}`));
+  await user.click(await screen.findByRole('link', { name: 'Back' }));
+  await user.click(await screen.findByRole('link', { name: 'Back' }));
+  expect(await screen.findByRole('link', { name: 'Resume workout' })).toHaveAttribute('href', `#/workout/${w.id}`);
+  expect(window.location.hash).toBe('#/');
+});
+test('a workout left more than 3 hours ago is offered, not opened', async () => {
+  vi.setSystemTime(new Date('2026-11-23T05:00:00Z'));
+  const w = await startWorkout({ date: '2026-11-23' });
+  vi.setSystemTime(new Date('2026-11-23T10:00:00Z'));
+  renderAt('#/');
+  expect(await screen.findByRole('link', { name: 'Resume workout' })).toHaveAttribute('href', `#/workout/${w.id}`);
+  await new Promise((r) => setTimeout(r, 50));
+  expect(window.location.hash).toBe('#/');
 });
 test('water buttons add up, and Undo takes back the last tap', async () => {
   renderAt('#/');

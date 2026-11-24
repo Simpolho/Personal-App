@@ -1,11 +1,12 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { db } from '../../db/db';
 import { firstEntryAt, getDay, removeEmptyMeals } from '../../db/log';
 import { getTargetsFor } from '../../db/targets';
 import { addWater, getWaterSettings, undoWater, waterTotal } from '../../db/water';
 import { listWeights } from '../../db/weight';
+import { getActiveWorkout } from '../../db/workouts';
 import { backupDue } from '../../domain/backup';
 import { formatDayLabel } from '../../domain/dates';
 import { average7, formatChange, formatKg, weeklyChange } from '../../domain/weight';
@@ -92,9 +93,22 @@ function WeightCard({ today }: { today: string }) {
   );
 }
 
+/** How recently a workout must have been changed for opening the app to go straight back to it. */
+const RESUME_WITHIN_MS = 3 * 60 * 60 * 1000;
+
 /** Where the app opens: today's food, water and weight at a glance. */
 export function HomeScreen() {
   const today = useToday();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const active = useLiveQuery(() => getActiveWorkout(), []);
+  // The app was just opened (Home is the first page of this visit, so its key is 'default'): if a
+  // workout was being logged in the last 3 hours, iPhone closed the app mid-workout; go back to it.
+  const opened = location.key === 'default';
+  useEffect(() => {
+    if (!opened || !active) return;
+    if (Date.now() - new Date(active.updatedAt).getTime() < RESUME_WITHIN_MS) navigate(`/workout/${active.id}`, { replace: true });
+  }, [opened, active, navigate]);
   // A meal left with nothing in it (New meal, then back) doesn't stay on the day.
   useEffect(() => {
     void removeEmptyMeals(today);
@@ -124,6 +138,14 @@ export function HomeScreen() {
             Last backup over 14 days ago — Export now
           </Link>
         )}
+        {active && (
+          <section aria-label="Workout in progress" className={`${card} flex items-center justify-between gap-3 p-4`}>
+            <span className="min-w-0 truncate font-medium">{`${active.name} in progress`}</span>
+            <Link to={`/workout/${active.id}`} className={btnPrimary}>
+              Resume workout
+            </Link>
+          </section>
+        )}
         <TotalsCard totals={day?.totals ?? {}} targets={targets ?? null} loading={day === undefined || targets === undefined} />
         <WaterCard today={today} />
         <WeightCard today={today} />
@@ -134,6 +156,9 @@ export function HomeScreen() {
           </Link>
           <Link to={`/day/${today}`} className={`${btnSecondary} w-full`}>
             Food log
+          </Link>
+          <Link to="/workouts" className={`${btnSecondary} w-full`}>
+            Workouts
           </Link>
         </nav>
       </main>

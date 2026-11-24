@@ -326,7 +326,9 @@ export function WorkoutScreen() {
     if (!w) return;
     if (!w.entries.some((e) => e.sets.some((s) => s.done))) return setDialog('discard');
     await saving.current;
-    await finishWorkout(w.id);
+    // Logged afterwards (started well before it was created): its length isn't known.
+    const loggedAfter = new Date(w.createdAt).getTime() - new Date(w.startedAt).getTime() > 60 * 60_000;
+    await finishWorkout(w.id, loggedAfter ? w.startedAt : undefined);
     navigate(`/workout/${w.id}/recap`, { replace: true });
   }
 

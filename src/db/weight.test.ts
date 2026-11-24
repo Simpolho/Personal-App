@@ -1,6 +1,6 @@
 import { beforeEach, expect, test, vi } from 'vitest';
 import { resetDb } from './db';
-import { deleteWeight, listWeights, logWeight } from './weight';
+import { bodyKgOn, deleteWeight, listWeights, logWeight } from './weight';
 
 beforeEach(() => resetDb());
 
@@ -24,4 +24,11 @@ test('weights come back oldest first', async () => {
   await logWeight('2026-11-01', 80);
   await logWeight('2026-11-12', 79);
   expect((await listWeights()).map((x) => x.date)).toEqual(['2026-11-01', '2026-11-12', '2026-11-23']);
+});
+test('body weight on a date is the latest weigh-in on or before it', async () => {
+  await logWeight('2026-11-20', 80);
+  await logWeight('2026-11-22', 79);
+  expect(await bodyKgOn('2026-11-21')).toBe(80);
+  expect(await bodyKgOn('2026-11-23')).toBe(79);
+  expect(await bodyKgOn('2026-11-19')).toBeNull();
 });

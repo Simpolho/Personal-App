@@ -6,6 +6,7 @@ import { createMeal, deleteEntry, getDay, logFood, quickAdd, setDayComplete } fr
 import { setTargets } from './targets';
 import { addWater, getWaterSettings, setWaterSettings, waterTotal } from './water';
 import { listWeights, logWeight } from './weight';
+import { finishWorkout, saveExercise, saveRoutine, saveWorkout, startWorkout } from './workouts';
 
 beforeEach(() => resetDb());
 
@@ -109,5 +110,29 @@ test('a backup from before weights and water still imports', async () => {
 });
 test('a water record with a non-number amount is refused', async () => {
   const bad = { format: 'fitness-app-export', version: 1, exportedAt: '', records: { water: [{ id: 'w', createdAt: 'x', updatedAt: 'x', date: '2026-11-23', ml: 'lots' }] } };
+  await expect(importAll(bad)).rejects.toBeInstanceOf(ImportError);
+});
+test('exercises, routines and workouts go through a backup and back exactly', async () => {
+  const ex = await saveExercise({ name: 'Bench', muscle: 'Chest', unit: 'plates', plateWeight: { value: 5, unit: 'kg' }, eachSide: false, note: 'seat 4' });
+  const routine = await saveRoutine({ name: 'Upper A', weekdays: [1], items: [{ exerciseId: ex.id, sets: 3, repsMin: 6, repsMax: 10, rpeTarget: '≤8', startWeight: 22.5 }] });
+  const started = await startWorkout({ routineId: routine.id, date: '2026-11-23' });
+  await saveWorkout({ ...started, entries: started.entries.map((e) => ({ ...e, sets: e.sets.map((s) => ({ ...s, reps: 8, rpe: 8, done: true })) })) });
+  await finishWorkout(started.id);
+  const before = { exercises: await db.exercises.toArray(), routines: await db.routines.toArray(), workouts: await db.workouts.toArray() };
+  const file = await exportAll();
+  expect(file.records.workouts).toHaveLength(1);
+  await resetDb();
+  await importAll(JSON.parse(JSON.stringify(file)));
+  expect({ exercises: await db.exercises.toArray(), routines: await db.routines.toArray(), workouts: await db.workouts.toArray() }).toEqual(before);
+});
+test('a backup from before workouts still imports, and a damaged workout is refused', async () => {
+  const old = { format: 'fitness-app-export', version: 1, exportedAt: '', records: { weights: [], water: [] } };
+  expect(await importAll(old)).toMatchObject({ added: 0 });
+  const bad = {
+    format: 'fitness-app-export',
+    version: 1,
+    exportedAt: '',
+    records: { workouts: [{ id: 'w', createdAt: 'x', updatedAt: 'x', date: '2026-11-23', name: 'Upper A', startedAt: 'x', entries: 'none', exerciseIds: [] }] },
+  };
   await expect(importAll(bad)).rejects.toBeInstanceOf(ImportError);
 });

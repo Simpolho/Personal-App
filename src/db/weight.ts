@@ -21,3 +21,9 @@ export async function deleteWeight(date: string): Promise<void> {
 export async function listWeights(): Promise<WeightEntry[]> {
   return (await db.weights.orderBy('date').toArray()).filter(isLive);
 }
+
+/** The latest weight logged on or before a date, or null if there is none. */
+export async function bodyKgOn(date: string): Promise<number | null> {
+  const entry = await db.weights.where('date').belowOrEqual(date).reverse().filter(isLive).first();
+  return entry?.kg ?? null;
+}

@@ -1,4 +1,5 @@
 import { nowIso } from '../domain/dates';
+import { MUSCLE_GROUPS, WEIGHT_UNITS } from '../domain/workouts';
 import { db } from './db';
 import type { BaseRecord, Settings } from './types';
 
@@ -18,6 +19,9 @@ export const RECORD_TABLES = [
   'settings',
   'weights',
   'water',
+  'exercises',
+  'routines',
+  'workouts',
 ] as const;
 export type RecordTable = (typeof RECORD_TABLES)[number];
 
@@ -91,6 +95,31 @@ const SHAPES: Record<RecordTable, (r: Record<string, unknown>) => boolean> = {
     ['waterTargetMl', 'waterSmallMl', 'waterLargeMl'].every((k) => r[k] === undefined || isNumber(r[k])),
   weights: (r) => isString(r.date) && isNumber(r.kg),
   water: (r) => isString(r.date) && isNumber(r.ml),
+  exercises: (r) =>
+    isString(r.name) &&
+    (MUSCLE_GROUPS as readonly unknown[]).includes(r.muscle) &&
+    (WEIGHT_UNITS as readonly unknown[]).includes(r.unit) &&
+    typeof r.eachSide === 'boolean' &&
+    isString(r.note) &&
+    (r.plateWeight === undefined || (isObject(r.plateWeight) && isNumber(r.plateWeight.value) && (r.plateWeight.unit === 'kg' || r.plateWeight.unit === 'lb'))),
+  routines: (r) =>
+    isString(r.name) &&
+    Array.isArray(r.weekdays) &&
+    r.weekdays.every(isNumber) &&
+    isListOf(r.items, (i) => isString(i.exerciseId) && isNumber(i.sets) && isNumber(i.repsMin) && isNumber(i.repsMax)),
+  workouts: (r) =>
+    isString(r.date) &&
+    isString(r.name) &&
+    isString(r.startedAt) &&
+    Array.isArray(r.exerciseIds) &&
+    r.exerciseIds.every(isString) &&
+    isListOf(
+      r.entries,
+      (e) =>
+        isString(e.exerciseId) &&
+        (WEIGHT_UNITS as readonly unknown[]).includes(e.unit) &&
+        isListOf(e.sets, (s) => typeof s.done === 'boolean' && typeof s.warmup === 'boolean'),
+    ),
 };
 
 function readRecords(file: unknown): Record<RecordTable, BaseRecord[]> {

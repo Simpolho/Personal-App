@@ -4,6 +4,10 @@ import './index.css'
 import App from './App.tsx'
 import { ensureTablesLoaded } from './data/tables.ts'
 import { requestPersistence } from './pwa/storage.ts'
+import { reloadWhenFilesAreStale } from './staleVersion.ts'
+
+// A page left open across an update reloads into the new version when it needs a file that's gone.
+reloadWhenFilesAreStale()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

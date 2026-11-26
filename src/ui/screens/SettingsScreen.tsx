@@ -1,14 +1,14 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useEffect, useState, type ChangeEvent } from 'react';
+import { Fragment, useEffect, useState, type ChangeEvent } from 'react';
 import { exportAll, importAll, ImportError, setLastExportAt } from '../../db/backup';
 import { db } from '../../db/db';
-import { getTargetsFor, setTargets } from '../../db/targets';
+import { getTargetSetsFor, setTargets } from '../../db/targets';
 import { getWaterSettings, setWaterSettings, type WaterSettings } from '../../db/water';
 import { INSA_SOURCE, OFF_SOURCE, USDA_SOURCE } from '../../data/credits';
 import { exportFileName } from '../../domain/backup';
 import { formatDayLabel, localDate } from '../../domain/dates';
 import { parseAmount } from '../../domain/nutrients';
-import { TARGET_KEYS, type TargetKey, type TargetValues } from '../../domain/targets';
+import { TARGET_KEYS, type TargetKey, type TargetSets, type TargetValues } from '../../domain/targets';
 import { canShareFile, downloadFile, readText, shareFile } from '../../pwa/saveFile';
 import { isStandalone, requestPersistence, storageStatus } from '../../pwa/storage';
 import { Field, Screen } from '../components/ui';
@@ -18,27 +18,38 @@ import { btnPrimary, btnSecondary, card, errorText, input, sectionTitle } from '
 
 const okText = 'text-sm font-medium text-good';
 
-function TargetsForm({ current, today }: { current: TargetValues | null; today: string }) {
-  const [values, setValues] = useState<Record<TargetKey, string>>(() => {
-    const start = {} as Record<TargetKey, string>;
-    for (const key of TARGET_KEYS) start[key] = current?.[key] === undefined ? '' : formatNumber(current[key]);
+type Column = 'main' | 'rest';
+const COLUMNS: { id: Column; heading: string; suffix: string }[] = [
+  { id: 'main', heading: 'Training day', suffix: 'training day' },
+  { id: 'rest', heading: 'Rest day', suffix: 'rest day' },
+];
+
+function TargetsForm({ current, today }: { current: TargetSets | null; today: string }) {
+  const [values, setValues] = useState<Record<Column, Record<TargetKey, string>>>(() => {
+    const start = { main: {}, rest: {} } as Record<Column, Record<TargetKey, string>>;
+    for (const { id } of COLUMNS) {
+      for (const key of TARGET_KEYS) {
+        const value = current?.[id][key];
+        start[id][key] = value === undefined ? '' : formatNumber(value);
+      }
+    }
     return start;
   });
   const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
 
   async function save() {
-    const targets: TargetValues = {};
-    for (const key of TARGET_KEYS) {
-      if (values[key].trim() === '') continue; // blank = not set
-      const value = parseAmount(values[key]);
-      if (value === null) return setNote({ ok: false, text: `${NUTRIENT_LABELS[key]}: enter a number` });
-      targets[key] = value;
+    const sets: Record<Column, TargetValues> = { main: {}, rest: {} };
+    for (const { id, suffix } of COLUMNS) {
+      for (const key of TARGET_KEYS) {
+        if (values[id][key].trim() === '') continue; // blank = not set
+        const value = parseAmount(values[id][key]);
+        if (value === null) return setNote({ ok: false, text: `${NUTRIENT_LABELS[key]}, ${suffix}: enter a number` });
+        sets[id][key] = value;
+      }
     }
-    await setTargets(today, targets);
-    setNote({
-      ok: true,
-      text: Object.keys(targets).length > 0 ? 'Targets saved. Earlier days keep the targets they had.' : 'Targets turned off from today.',
-    });
+    await setTargets(today, sets.main, sets.rest);
+    const any = Object.keys(sets.main).length > 0 || Object.keys(sets.rest).length > 0;
+    setNote({ ok: true, text: any ? 'Targets saved. Earlier days keep the targets they had.' : 'Targets turned off from today.' });
   }
 
   return (
@@ -46,19 +57,30 @@ function TargetsForm({ current, today }: { current: TargetValues | null; today: 
       <h2 className={sectionTitle}>Targets</h2>
       <div className={`${card} space-y-3 p-4`}>
         <p className="text-sm text-muted">Daily targets. Each one is optional; leave a box empty for no target.</p>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-[auto_1fr_1fr] items-center gap-x-3 gap-y-2">
+          <span />
+          {COLUMNS.map(({ id, heading }) => (
+            <span key={id} className="text-sm font-medium text-muted">
+              {heading}
+            </span>
+          ))}
           {TARGET_KEYS.map((key) => (
-            <Field key={key} label={NUTRIENT_LABELS[key]}>
-              <input
-                className={input}
-                inputMode="decimal"
-                value={values[key]}
-                onChange={(e) => {
-                  setValues({ ...values, [key]: e.target.value });
-                  setNote(null);
-                }}
-              />
-            </Field>
+            <Fragment key={key}>
+              <span className="text-sm font-medium text-muted">{NUTRIENT_LABELS[key]}</span>
+              {COLUMNS.map(({ id, suffix }) => (
+                <input
+                  key={id}
+                  aria-label={`${NUTRIENT_LABELS[key]}, ${suffix}`}
+                  className={input}
+                  inputMode="decimal"
+                  value={values[id][key]}
+                  onChange={(e) => {
+                    setValues({ ...values, [id]: { ...values[id], [key]: e.target.value } });
+                    setNote(null);
+                  }}
+                />
+              ))}
+            </Fragment>
           ))}
         </div>
         {note && <p role={note.ok ? 'status' : 'alert'} className={note.ok ? okText : errorText}>{note.text}</p>}
@@ -279,7 +301,7 @@ function StorageSection() {
 
 export function SettingsScreen() {
   const today = localDate(new Date());
-  const current = useLiveQuery(() => getTargetsFor(today), [today]);
+  const current = useLiveQuery(() => getTargetSetsFor(today), [today]);
   const water = useLiveQuery(() => getWaterSettings(), []);
 
   return (

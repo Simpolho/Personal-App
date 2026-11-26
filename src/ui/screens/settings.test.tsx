@@ -2,8 +2,8 @@ import { screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { exportAll } from '../../db/backup';
 import { db, resetDb } from '../../db/db';
-import { createMeal, quickAdd } from '../../db/log';
-import { getTargetsFor, setTargets } from '../../db/targets';
+import { createMeal, quickAdd, setDayKind } from '../../db/log';
+import { getTargetSetsFor, getTargetsFor, setTargets } from '../../db/targets';
 import { getWaterSettings, setWaterSettings } from '../../db/water';
 import { renderAt, user } from '../../test/render';
 
@@ -21,8 +21,8 @@ const lastExportAt = async () => (await db.settings.get('settings'))?.lastExport
 
 test('saving targets applies from today, blanks mean not set', async () => {
   renderAt('#/settings');
-  await user.type(await screen.findByLabelText('Calories (kcal)'), '2300');
-  await user.type(screen.getByLabelText('Protein (g)'), '160,5');
+  await user.type(await screen.findByLabelText('Calories (kcal), training day'), '2300');
+  await user.type(screen.getByLabelText('Protein (g), training day'), '160,5');
   await user.click(screen.getByRole('button', { name: /Save — applies from today/ }));
   await waitFor(async () => expect(await getTargetsFor('2026-11-16')).toEqual({ kcal: 2300, protein: 160.5 }));
   expect(await getTargetsFor('2026-11-15')).toBeNull();
@@ -30,7 +30,7 @@ test('saving targets applies from today, blanks mean not set', async () => {
 test('current targets are shown; clearing them all turns targets off from today', async () => {
   await setTargets('2026-11-01', { kcal: 2300 });
   renderAt('#/settings');
-  const kcal = await screen.findByLabelText('Calories (kcal)');
+  const kcal = await screen.findByLabelText('Calories (kcal), training day');
   await waitFor(() => expect(kcal).toHaveValue('2300'));
   await user.clear(kcal);
   await user.click(screen.getByRole('button', { name: /Save — applies from today/ }));
@@ -39,10 +39,36 @@ test('current targets are shown; clearing them all turns targets off from today'
 });
 test('a target that is not a number is refused', async () => {
   renderAt('#/settings');
-  await user.type(await screen.findByLabelText('Calories (kcal)'), 'lots');
+  await user.type(await screen.findByLabelText('Calories (kcal), training day'), 'lots');
   await user.click(screen.getByRole('button', { name: /Save — applies from today/ }));
-  expect(await screen.findByText('Calories (kcal): enter a number')).toBeInTheDocument();
+  expect(await screen.findByText('Calories (kcal), training day: enter a number')).toBeInTheDocument();
   expect(await getTargetsFor('2026-11-16')).toBeNull();
+});
+test('both columns save, and the rest set applies from today', async () => {
+  renderAt('#/settings');
+  await user.type(await screen.findByLabelText('Calories (kcal), training day'), '2400');
+  await user.type(screen.getByLabelText('Carbs (g), training day'), '280');
+  await user.type(screen.getByLabelText('Calories (kcal), rest day'), '2000');
+  await user.type(screen.getByLabelText('Carbs (g), rest day'), '180');
+  await user.click(screen.getByRole('button', { name: /Save — applies from today/ }));
+  await waitFor(async () =>
+    expect(await getTargetSetsFor('2026-11-16')).toEqual({ main: { kcal: 2400, carbs: 280 }, rest: { kcal: 2000, carbs: 180 } }),
+  );
+  expect(await getTargetSetsFor('2026-11-15')).toBeNull();
+});
+test('on a rest day each column still shows its own numbers', async () => {
+  await setTargets('2026-11-01', { kcal: 2400 }, { kcal: 2000 });
+  await setDayKind('2026-11-16', 'rest');
+  renderAt('#/settings');
+  await waitFor(() => expect(screen.getByLabelText('Calories (kcal), training day')).toHaveValue('2400'));
+  expect(screen.getByLabelText('Calories (kcal), rest day')).toHaveValue('2000');
+});
+test('a rest-day box that is not a number is refused', async () => {
+  renderAt('#/settings');
+  await user.type(await screen.findByLabelText('Calories (kcal), rest day'), 'lots');
+  await user.click(screen.getByRole('button', { name: /Save — applies from today/ }));
+  expect(await screen.findByText('Calories (kcal), rest day: enter a number')).toBeInTheDocument();
+  expect(await getTargetSetsFor('2026-11-16')).toBeNull();
 });
 test('import shows a summary or the error', async () => {
   renderAt('#/settings');

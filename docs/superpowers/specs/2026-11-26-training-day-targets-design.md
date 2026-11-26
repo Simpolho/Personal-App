@@ -46,7 +46,7 @@ He wants a simple **Training day | Rest day** switch for each day. The switch on
   2. If its rest set has no values, use the main set, whatever the kind.
   3. Otherwise use the rest set on a Rest day and the main set on a Training day.
   4. A set with no values means no targets, as now.
-- **Settings form:** two columns, Training day and Rest day, with one row each for calories, protein, carbs and fat. The note says: "Leave the Rest day column empty to use the same targets every day." The button stays "Save — applies from today".
+- **Settings form:** just the two columns, Training day and Rest day, with one row each for calories, protein, carbs and fat. There is no extra note about using one set; the existing "each one is optional" line stays. The button stays "Save — applies from today". The user's current targets show in the Training day column, and the Rest day column starts empty until he fills it in.
 - **Switch look:** the same segmented style as the Add food screen's list tabs (Claude's call). The selected option uses the accent. It's labelled for VoiceOver as a choice between the two, with the selected one announced.
 - **Weekdays** come from the routines' existing weekday setting (`routinesForDate`). Deleted routines don't count.
 

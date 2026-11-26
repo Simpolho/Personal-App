@@ -6,7 +6,8 @@ export const btnPrimary = `${btn} bg-accent text-on-accent`;
 export const btnSecondary = `${btn} bg-raised text-fg`;
 /** Finishing a screen: light, so it is not mistaken for the blue action buttons. */
 export const btnDone = `${btn} bg-fg text-page`;
-export const btnDanger = `${btn} bg-raised text-danger`;
+/** No fill: red text on a gray button is too faint, so it sits on the card with a red outline. */
+export const btnDanger = `${btn} text-danger ring-1 ring-danger/30`;
 export const input =
   'min-h-11 w-full rounded-xl border-0 bg-raised px-3 text-base text-fg ring-1 ring-line-strong placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-accent';
 export const row = 'flex min-h-11 w-full items-center justify-between gap-3 px-4 py-2.5 text-left active:bg-raised';

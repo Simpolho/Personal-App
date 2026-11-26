@@ -168,7 +168,7 @@ export function ScanScreen() {
           </div>
         )}
       </div>
-      <p className="px-1 text-sm text-zinc-500">Point the camera at the barcode; it reads it by itself.</p>
+      <p className="px-1 text-sm text-muted">Point the camera at the barcode; it reads it by itself.</p>
 
       <form className="space-y-2" onSubmit={lookUpTyped}>
         <div className="grid grid-cols-[1fr_auto] items-end gap-2">

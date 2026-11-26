@@ -73,18 +73,34 @@ test("the iPhone's status bar, launch colour and icon are dark", () => {
 });
 
 test('no screen uses the light palette', () => {
-  // The camera view stays black with white text over the video.
-  const allowed = new Set(['src/ui/screens/ScanScreen.tsx']);
+  // The camera view keeps its black and white (text over the video); nothing else is exempt.
+  const cameraOnly = /^(?:bg|text|ring|border)-(?:black|white)(?:\/\d+)?$/;
+  const camera = 'src/ui/screens/ScanScreen.tsx';
   const light = /\b(?:bg|text|ring|border|divide|fill|stroke|accent|placeholder|from|to)-(?:white|black|zinc|emerald|green|amber|red|sky|gray|slate|neutral)(?:-\d+)?\b/g;
   const hits: string[] = [];
   for (const file of readdirSync('src', { recursive: true, withFileTypes: false }) as string[]) {
     const path = `src/${file}`;
-    if (!/\.(ts|tsx)$/.test(path) || /\.test\./.test(path) || allowed.has(path)) continue;
+    if (!/\.(ts|tsx)$/.test(path) || /\.test\./.test(path)) continue;
     readFileSync(path, 'utf8')
       .split('\n')
       .forEach((line, i) => {
-        for (const m of line.matchAll(light)) hits.push(`${path}:${i + 1} ${m[0]}`);
+        for (const m of line.matchAll(light)) if (!(path === camera && cameraOnly.test(m[0]))) hits.push(`${path}:${i + 1} ${m[0]}`);
       });
   }
   expect(hits).toEqual([]);
+});
+
+test('delete buttons are readable on the background they sit on', () => {
+  const styles = readFileSync('src/ui/styles.ts', 'utf8');
+  const danger = /export const btnDanger = `\$\{btn\} ([^`]*)`/.exec(styles)?.[1] ?? '';
+  const bg = /\bbg-([a-z-]+)\b/.exec(danger)?.[1] ?? 'card';
+  const text = /\btext-([a-z-]+)\b/.exec(danger)?.[1];
+  expect(text).toBe('danger');
+  expect(contrast(colour(text!), colour(bg))).toBeGreaterThanOrEqual(4.5);
+});
+
+test('the "left after this" line is not in the success green', () => {
+  const preview = readFileSync('src/ui/components/NutrientPreview.tsx', 'utf8');
+  const line = preview.split('\n').find((l) => l.includes('{left}'))!;
+  expect(line).not.toMatch(/\btext-good\b/);
 });

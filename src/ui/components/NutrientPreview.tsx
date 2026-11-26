@@ -35,7 +35,7 @@ export function NutrientPreview({
           );
         })}
       </dl>
-      {left && <p className="border-t border-line pt-3 text-sm font-medium text-good">{left}</p>}
+      {left && <p className="border-t border-line pt-3 text-sm font-medium text-accent-soft">{left}</p>}
     </section>
   );
 }

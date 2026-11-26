@@ -104,3 +104,16 @@ test('the "left after this" line is not in the success green', () => {
   const line = preview.split('\n').find((l) => l.includes('{left}'))!;
   expect(line).not.toMatch(/\btext-good\b/);
 });
+
+test('every dropdown uses the shared select box, so it matches the text and date boxes on iPhone', () => {
+  const styles = readFileSync('src/ui/styles.ts', 'utf8');
+  expect(styles).toMatch(/export const select = `\$\{input\} [^`]*\bappearance-none\b[^`]*`/);
+  const offenders: string[] = [];
+  for (const file of readdirSync('src', { recursive: true, withFileTypes: false }) as string[]) {
+    const path = `src/${file}`;
+    if (!/\.tsx$/.test(path) || /\.test\./.test(path)) continue;
+    const text = readFileSync(path, 'utf8');
+    for (const m of text.matchAll(/<select\b[^>]*?className=\{([^}]+)\}/gs)) if (m[1]!.trim() !== 'select') offenders.push(`${path}: className={${m[1]}}`);
+  }
+  expect(offenders).toEqual([]);
+});

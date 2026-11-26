@@ -7,7 +7,7 @@ import { listExercises, newEntry, saveExercise, saveWorkout } from '../../db/wor
 import { MUSCLE_GROUPS, WEIGHT_UNITS } from '../../domain/workouts';
 import { Field, Screen } from '../components/ui';
 import { WEIGHT_UNIT_NAMES } from '../labels';
-import { btnPrimary, card, errorText, input, row, sectionTitle } from '../styles';
+import { btnPrimary, card, errorText, input, row, sectionTitle, select } from '../styles';
 
 const fold = (text: string) =>
   text
@@ -102,7 +102,7 @@ export function ExercisePickerScreen() {
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Muscle group">
-              <select className={input} value={muscle} onChange={(e) => setMuscle(e.target.value as MuscleGroup)}>
+              <select className={select} value={muscle} onChange={(e) => setMuscle(e.target.value as MuscleGroup)}>
                 <option value="" disabled>
                   Choose
                 </option>
@@ -114,7 +114,7 @@ export function ExercisePickerScreen() {
               </select>
             </Field>
             <Field label="Unit">
-              <select className={input} value={unit} onChange={(e) => setUnit(e.target.value as WeightUnit)}>
+              <select className={select} value={unit} onChange={(e) => setUnit(e.target.value as WeightUnit)}>
                 {WEIGHT_UNITS.map((u) => (
                   <option key={u} value={u}>
                     {WEIGHT_UNIT_NAMES[u]}

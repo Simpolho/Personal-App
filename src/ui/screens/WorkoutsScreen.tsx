@@ -7,7 +7,7 @@ import { formatDayLabel, localDate } from '../../domain/dates';
 import { routinesForDate, workoutMinutes } from '../../domain/workouts';
 import { Field, Screen } from '../components/ui';
 import { useToday } from '../useToday';
-import { btnPrimary, btnSecondary, card, input, row, sectionTitle } from '../styles';
+import { btnPrimary, btnSecondary, card, row, sectionTitle, select } from '../styles';
 import { DateBox } from '../components/DateBox';
 
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -118,8 +118,8 @@ export function WorkoutsScreen() {
               <DateBox value={pastDate} max={today} onChange={setPastDate} />
             </Field>
             <Field label="Routine">
-              <select className={input} value={pastRoutine} onChange={(e) => setPastRoutine(e.target.value)}>
-                <option value="">Empty workout</option>
+              <select className={select} value={pastRoutine} onChange={(e) => setPastRoutine(e.target.value)}>
+                <option value="">Empty</option>
                 {(routines ?? []).map((r) => (
                   <option key={r.id} value={r.id}>
                     {r.name}

@@ -8,7 +8,7 @@ import { MUSCLE_GROUPS, parseLift, WEIGHT_UNITS } from '../../domain/workouts';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Field, Screen } from '../components/ui';
 import { WEIGHT_UNIT_NAMES } from '../labels';
-import { btnDanger, btnPrimary, card, errorText, input } from '../styles';
+import { btnDanger, btnPrimary, card, errorText, input, select } from '../styles';
 
 const BACK = '/workouts/routines';
 
@@ -60,7 +60,7 @@ function ExerciseForm({ existing }: { existing: Exercise | null }) {
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Muscle group">
-            <select className={input} value={muscle} onChange={(e) => setMuscle(e.target.value as MuscleGroup)}>
+            <select className={select} value={muscle} onChange={(e) => setMuscle(e.target.value as MuscleGroup)}>
               <option value="" disabled>
                 Choose
               </option>
@@ -72,7 +72,7 @@ function ExerciseForm({ existing }: { existing: Exercise | null }) {
             </select>
           </Field>
           <Field label="Unit">
-            <select className={input} value={unit} onChange={(e) => setUnit(e.target.value as WeightUnit)}>
+            <select className={select} value={unit} onChange={(e) => setUnit(e.target.value as WeightUnit)}>
               {WEIGHT_UNITS.map((u) => (
                 <option key={u} value={u}>
                   {WEIGHT_UNIT_NAMES[u]}
@@ -87,7 +87,7 @@ function ExerciseForm({ existing }: { existing: Exercise | null }) {
               <input className={input} inputMode="decimal" value={plateValue} placeholder="Not set" onChange={(e) => setPlateValue(e.target.value)} />
             </Field>
             <Field label="Plate unit">
-              <select className={input} value={plateUnit} onChange={(e) => setPlateUnit(e.target.value as 'kg' | 'lb')}>
+              <select className={select} value={plateUnit} onChange={(e) => setPlateUnit(e.target.value as 'kg' | 'lb')}>
                 <option value="kg">kg</option>
                 <option value="lb">lb</option>
               </select>

@@ -11,7 +11,7 @@ import type { TargetValues } from '../../domain/targets';
 import { NutrientPreview } from '../components/NutrientPreview';
 import { Field, Screen } from '../components/ui';
 import { formatNumber } from '../format';
-import { btnPrimary, btnSecondary, errorText, input } from '../styles';
+import { btnPrimary, btnSecondary, errorText, input, select } from '../styles';
 
 const baseUnit = (food: FoodLike) => (food.basis === '100g' ? 'g' : 'ml');
 
@@ -98,7 +98,7 @@ function AmountForm({
           />
         </Field>
         <Field label="Unit">
-          <select className={input} value={unit} onChange={(e) => setUnit(e.target.value)}>
+          <select className={select} value={unit} onChange={(e) => setUnit(e.target.value)}>
             <option value={base}>{base}</option>
             {food.servings.map((s) => (
               <option key={s.label} value={s.label}>{`${s.label} (${formatNumber(s.grams)} ${base})`}</option>

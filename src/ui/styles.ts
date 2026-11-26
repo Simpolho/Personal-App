@@ -10,6 +10,8 @@ export const btnDone = `${btn} bg-fg text-page`;
 export const btnDanger = `${btn} text-danger ring-1 ring-danger/30`;
 export const input =
   'min-h-11 w-full rounded-xl border-0 bg-raised px-3 text-base text-fg ring-1 ring-line-strong placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-accent';
+/** A dropdown: the same box as a text field (Safari's own select is a different size on iPhone). */
+export const select = `${input} appearance-none select-arrow pr-10`;
 export const row = 'flex min-h-11 w-full items-center justify-between gap-3 px-4 py-2.5 text-left active:bg-raised';
 export const sectionTitle = 'px-1 text-sm font-medium uppercase tracking-wide text-muted';
 export const errorText = 'text-sm font-medium text-danger';

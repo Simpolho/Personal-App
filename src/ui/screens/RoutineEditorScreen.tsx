@@ -8,7 +8,7 @@ import { deleteRoutine, listExercises, saveRoutine } from '../../db/workouts';
 import { parseLift, parseReps } from '../../domain/workouts';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Field, Screen } from '../components/ui';
-import { btnDanger, btnPrimary, btnSecondary, card, errorText, input, sectionTitle } from '../styles';
+import { btnDanger, btnPrimary, btnSecondary, card, errorText, input, sectionTitle, select } from '../styles';
 
 const BACK = '/workouts/routines';
 /** Checkbox order Mon … Sun, with JavaScript's day numbers (0 = Sunday). */
@@ -143,7 +143,7 @@ function RoutineForm({ existing }: { existing: Routine | null }) {
         ))}
         <Field label="Add exercise">
           <select
-            className={input}
+            className={select}
             value=""
             onChange={(e) => {
               const exerciseId = e.target.value;

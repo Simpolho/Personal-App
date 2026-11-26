@@ -280,3 +280,9 @@ test('a weight typed with a decimal comma is not marked wrong halfway', async ()
   await waitFor(async () => expect((await stored(w.id)).entries[0]?.sets[0]?.weight).toBe(18.1));
   expect(field).not.toHaveAttribute('aria-invalid');
 });
+test("a finished workout's date is shown by the app itself, centred", async () => {
+  await history();
+  const [done] = await db.workouts.toArray();
+  renderAt(`#/workout/${done!.id}`);
+  expect(await screen.findByText('Mon 16 Nov 2026')).toHaveClass('justify-center');
+});

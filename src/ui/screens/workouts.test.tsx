@@ -104,3 +104,9 @@ test('a workout can be logged afterwards for an earlier date; it has no length',
   const rows = await within(await screen.findByRole('region', { name: 'Past workouts' })).findAllByRole('link');
   expect(rows.map((r) => r.textContent)).toEqual(['Fri 20 Nov · Upper B']);
 });
+test("the past workout's date is shown by the app itself, centred", async () => {
+  vi.setSystemTime(new Date('2026-11-23T10:00:00Z'));
+  renderAt('#/workouts');
+  const form = within(await screen.findByRole('region', { name: 'Log a past workout' }));
+  expect(form.getByText('Mon 23 Nov 2026')).toHaveClass('justify-center');
+});

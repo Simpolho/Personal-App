@@ -8,6 +8,7 @@ import { routinesForDate, workoutMinutes } from '../../domain/workouts';
 import { Field, Screen } from '../components/ui';
 import { useToday } from '../useToday';
 import { btnPrimary, btnSecondary, card, input, row, sectionTitle } from '../styles';
+import { DateBox } from '../components/DateBox';
 
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const weekdayOf = (date: string) => {
@@ -114,13 +115,7 @@ export function WorkoutsScreen() {
         <div className={`${card} space-y-3 p-4`}>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Date">
-              <input
-                type="date"
-                className={`${input} block min-w-0 appearance-none`}
-                value={pastDate}
-                max={today}
-                onChange={(e) => setPastDate(e.target.value)}
-              />
+              <DateBox value={pastDate} max={today} onChange={setPastDate} />
             </Field>
             <Field label="Routine">
               <select className={input} value={pastRoutine} onChange={(e) => setPastRoutine(e.target.value)}>

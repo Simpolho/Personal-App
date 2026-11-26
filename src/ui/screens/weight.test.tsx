@@ -119,3 +119,10 @@ test('a Weight screen left open overnight logs the morning weight on the new day
   expect(screen.getByText('Saved 78.20 kg for Tue 24 Nov.')).toBeInTheDocument();
   expect(await kg()).toEqual([['2026-11-23', 78.5], ['2026-11-24', 78.2]]);
 });
+test('the date is shown by the app itself, centred, and follows the picker', async () => {
+  renderAt('#/weight');
+  const shown = await screen.findByText('Mon 23 Nov 2026');
+  expect(shown).toHaveClass('justify-center');
+  fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2026-11-21' } });
+  expect(await screen.findByText('Sat 21 Nov 2026')).toBeInTheDocument();
+});

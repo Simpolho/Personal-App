@@ -9,7 +9,8 @@ import { nowIso } from '../../domain/dates';
 import { finishedVersion, formatElapsed, formatLast, formatTarget, parseLift, parseReps, RPE_VALUES } from '../../domain/workouts';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Field, Screen } from '../components/ui';
-import { btnDanger, btnDone, btnSecondary, card, input } from '../styles';
+import { btnDanger, btnDone, btnSecondary, card } from '../styles';
+import { DateBox } from '../components/DateBox';
 
 /** Moves an ISO time by whole local days, keeping the time of day. */
 function shiftDays(iso: string, days: number): string {
@@ -492,12 +493,9 @@ export function WorkoutScreen() {
       {!inProgress && (
         <section className={`${card} space-y-3 p-4`}>
           <Field label="Date">
-            <input
-              type="date"
-              className={`${input} block min-w-0 appearance-none`}
+            <DateBox
               value={workout.date}
-              onChange={(e) => {
-                const date = e.target.value;
+              onChange={(date) => {
                 if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
                 update((w) => {
                   const days = dayNumber(date) - dayNumber(w.date);

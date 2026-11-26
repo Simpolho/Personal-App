@@ -9,6 +9,7 @@ import { Field, Screen } from '../components/ui';
 import { WeightChart } from '../components/WeightChart';
 import { btnDanger, btnPrimary, btnSecondary, card, errorText, input, sectionTitle } from '../styles';
 import { useToday } from '../useToday';
+import { DateBox } from '../components/DateBox';
 
 type Note = { ok: boolean; text: string } | null;
 
@@ -56,13 +57,11 @@ function WeightForm({
           />
         </Field>
         <Field label="Date">
-          <input
-            type="date"
-            className={`${input} block min-w-0 appearance-none`}
+          <DateBox
             value={date}
             max={today}
-            onChange={(e) => {
-              setDate(e.target.value);
+            onChange={(next) => {
+              setDate(next);
               onNote(null);
             }}
           />

@@ -18,10 +18,10 @@ function Bar({ label, value, max }: { label: string; value: number; max: number 
       aria-valuemin={0}
       aria-valuemax={max}
       aria-valuenow={Math.round(value)}
-      className="h-2 overflow-hidden rounded-full bg-zinc-200"
+      className="h-2 overflow-hidden rounded-full bg-raised"
     >
       <div
-        className={`h-full rounded-full ${over ? 'bg-amber-500' : 'bg-emerald-500'}`}
+        className={`h-full rounded-full ${over ? 'bg-warn' : 'bg-accent'}`}
         style={{ width: `${Math.min(100, (value / max) * 100)}%` }}
       />
     </div>
@@ -49,7 +49,7 @@ export function TotalsCard({ totals, targets, loading = false }: { totals: Nutri
           return (
             <div key={key} className="space-y-1">
               <div className="flex items-baseline justify-between text-sm">
-                <dt className="text-zinc-600">{label}</dt>
+                <dt className="text-muted">{label}</dt>
                 <dd className="font-medium tabular-nums">
                   {target !== undefined
                     ? `${formatWhole(value)} / ${formatWhole(target)} g`

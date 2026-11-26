@@ -95,7 +95,7 @@ function ExerciseForm({ existing }: { existing: Exercise | null }) {
           </div>
         )}
         <label className="flex min-h-11 items-center gap-3">
-          <input type="checkbox" className="size-5 accent-emerald-600" checked={eachSide} onChange={(e) => setEachSide(e.target.checked)} />
+          <input type="checkbox" className="size-5 accent-accent" checked={eachSide} onChange={(e) => setEachSide(e.target.checked)} />
           <span>Each side</span>
         </label>
         <Field label="Note">
@@ -140,7 +140,7 @@ export function ExerciseEditorScreen() {
   if (id !== 'new' && !loaded.existing) {
     return (
       <Screen title="Not found" back={BACK}>
-        <p className="text-zinc-600">This exercise is no longer available.</p>
+        <p className="text-muted">This exercise is no longer available.</p>
       </Screen>
     );
   }

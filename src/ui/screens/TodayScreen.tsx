@@ -9,7 +9,7 @@ import { TotalsCard } from '../components/TotalsCard';
 import { describeAmount } from '../format';
 import { btnPrimary, btnSecondary, card } from '../styles';
 
-const arrow = 'flex size-11 items-center justify-center rounded-full text-2xl text-emerald-700 active:bg-zinc-100';
+const arrow = 'flex size-11 items-center justify-center rounded-full text-2xl text-accent-soft active:bg-raised';
 
 export function TodayScreen() {
   const { date = '' } = useParams();
@@ -31,7 +31,7 @@ export function TodayScreen() {
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-md flex-col">
-      <header className="sticky top-0 z-10 border-b border-zinc-200 bg-white/95 pt-[env(safe-area-inset-top)] backdrop-blur">
+      <header className="sticky top-0 z-10 border-b border-line bg-page/95 pt-[env(safe-area-inset-top)] backdrop-blur">
         <div className="flex min-h-12 items-center justify-between px-2">
           <Link to="/" aria-label="Home" className={arrow}>
             <span aria-hidden="true">⌂</span>
@@ -42,7 +42,7 @@ export function TodayScreen() {
           <div className="text-center leading-tight">
             <h1 className="text-lg font-semibold">{formatDayLabel(date)}</h1>
             {date !== today && (
-              <Link to={`/day/${today}`} className="text-sm font-medium text-emerald-700">
+              <Link to={`/day/${today}`} className="text-sm font-medium text-accent-soft">
                 Back to today
               </Link>
             )}
@@ -58,13 +58,13 @@ export function TodayScreen() {
         <TotalsCard totals={day?.totals ?? {}} targets={targets ?? null} loading={day === undefined || targets === undefined} />
 
         {day === undefined ? null : meals.length === 0 ? (
-          <p className="px-1 text-zinc-500">Nothing logged yet.</p>
+          <p className="px-1 text-muted">Nothing logged yet.</p>
         ) : (
           meals.map(({ meal, entries, totals }) => (
-            <Link key={meal.id} to={`/meal/${meal.id}`} className={`${card} block p-4 active:bg-zinc-50`}>
+            <Link key={meal.id} to={`/meal/${meal.id}`} className={`${card} block p-4 active:bg-raised`}>
               <div className="flex items-baseline justify-between gap-3">
                 <h2 className="font-semibold">{`${meal.name} · ${meal.time}`}</h2>
-                <span className="shrink-0 text-sm font-medium tabular-nums text-zinc-600">
+                <span className="shrink-0 text-sm font-medium tabular-nums text-muted">
                   {`${formatNutrient('kcal', totals.kcal ?? 0)} kcal`}
                 </span>
               </div>
@@ -76,9 +76,9 @@ export function TodayScreen() {
                       <li key={entry.id} className="flex justify-between gap-3">
                         <span>
                           {entry.nameSnapshot}
-                          {amount && <span className="text-zinc-500">{`, ${amount}`}</span>}
+                          {amount && <span className="text-muted">{`, ${amount}`}</span>}
                         </span>
-                        <span className="shrink-0 tabular-nums text-zinc-600">
+                        <span className="shrink-0 tabular-nums text-muted">
                           {formatNutrient('kcal', entry.nutrientsSnapshot.kcal)}
                         </span>
                       </li>
@@ -93,7 +93,7 @@ export function TodayScreen() {
         <label className={`${card} flex min-h-11 items-center gap-3 px-4 py-2`}>
           <input
             type="checkbox"
-            className="size-5 accent-emerald-600"
+            className="size-5 accent-accent"
             checked={day?.complete ?? false}
             onChange={(e) => void setDayComplete(date, e.target.checked)}
           />
@@ -105,7 +105,7 @@ export function TodayScreen() {
         </Link>
       </main>
 
-      <div className="fixed inset-x-0 bottom-0 z-10 mx-auto max-w-md border-t border-zinc-200 bg-white/95 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] backdrop-blur">
+      <div className="fixed inset-x-0 bottom-0 z-10 mx-auto max-w-md border-t border-line bg-page/95 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] backdrop-blur">
         <button type="button" className={`${btnPrimary} w-full`} onClick={() => navigate(`/day/${date}/log`)}>
           Log food
         </button>

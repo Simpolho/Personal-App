@@ -21,16 +21,16 @@ export function LogFoodSheet() {
 
   return (
     <Screen title="Add to…" back={`/day/${date}`}>
-      <div className={`${card} divide-y divide-zinc-200 overflow-hidden`}>
+      <div className={`${card} divide-y divide-line overflow-hidden`}>
         <button type="button" className={row} onClick={() => void newMeal()}>
           <span>
-            <span aria-hidden="true" className="mr-2 text-emerald-700">+</span>
+            <span aria-hidden="true" className="mr-2 text-accent-soft">+</span>
             New meal
           </span>
         </button>
         <button type="button" className={row} onClick={() => navigate(`/day/${date}/templates`)}>
           <span>
-            <span aria-hidden="true" className="mr-2 text-emerald-700">↻</span>
+            <span aria-hidden="true" className="mr-2 text-accent-soft">↻</span>
             Repeat a saved meal
           </span>
         </button>
@@ -39,7 +39,7 @@ export function LogFoodSheet() {
       {day && day.meals.length > 0 && (
         <section className="space-y-2">
           <h2 className={sectionTitle}>Meals</h2>
-          <div className={`${card} divide-y divide-zinc-200 overflow-hidden`}>
+          <div className={`${card} divide-y divide-line overflow-hidden`}>
             {day.meals.map(({ meal }) => (
               <button key={meal.id} type="button" className={row} onClick={() => navigate(`/meal/${meal.id}/add`)}>
                 {`${meal.name} · ${meal.time}`}

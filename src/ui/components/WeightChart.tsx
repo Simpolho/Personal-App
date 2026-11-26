@@ -31,24 +31,24 @@ export function WeightChart({ weights, endDate }: { weights: WeightEntry[]; endD
 
   return (
     <svg role="img" aria-label="Last 30 days" viewBox={`0 0 ${W} ${H}`} className="w-full">
-      <line x1={PAD.left} x2={W - PAD.right} y1={H - PAD.bottom} y2={H - PAD.bottom} className="stroke-zinc-200" />
-      <text x={PAD.left - 6} y={y(high)} textAnchor="end" dominantBaseline="middle" className="fill-zinc-500 text-[10px]">
+      <line x1={PAD.left} x2={W - PAD.right} y1={H - PAD.bottom} y2={H - PAD.bottom} className="stroke-line" />
+      <text x={PAD.left - 6} y={y(high)} textAnchor="end" dominantBaseline="middle" className="fill-muted text-[10px]">
         {formatKg(high)}
       </text>
       {formatKg(low) !== formatKg(high) && (
-        <text x={PAD.left - 6} y={y(low)} textAnchor="end" dominantBaseline="middle" className="fill-zinc-500 text-[10px]">
+        <text x={PAD.left - 6} y={y(low)} textAnchor="end" dominantBaseline="middle" className="fill-muted text-[10px]">
           {formatKg(low)}
         </text>
       )}
-      <text x={PAD.left} y={H - 4} className="fill-zinc-500 text-[10px]">
+      <text x={PAD.left} y={H - 4} className="fill-muted text-[10px]">
         30 days ago
       </text>
-      <text x={W - PAD.right} y={H - 4} textAnchor="end" className="fill-zinc-500 text-[10px]">
+      <text x={W - PAD.right} y={H - 4} textAnchor="end" className="fill-muted text-[10px]">
         Today
       </text>
-      {line && <polyline data-testid="average-line" points={line} fill="none" className="stroke-emerald-600" strokeWidth={2} />}
+      {line && <polyline data-testid="average-line" points={line} fill="none" className="stroke-accent-soft" strokeWidth={2} />}
       {shown.map((w) => (
-        <circle key={w.date} data-testid="weigh-in" cx={x(dayIndex(w.date))} cy={y(w.kg)} r={3} className="fill-zinc-500" />
+        <circle key={w.date} data-testid="weigh-in" cx={x(dayIndex(w.date))} cy={y(w.kg)} r={3} className="fill-muted" />
       ))}
     </svg>
   );

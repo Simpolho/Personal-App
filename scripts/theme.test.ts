@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { expect, test } from 'vitest';
 
 const css = readFileSync('src/index.css', 'utf8');
@@ -70,4 +70,21 @@ test("the iPhone's status bar, launch colour and icon are dark", () => {
   const icon = readFileSync('public/icon.svg', 'utf8');
   expect(icon).toContain('#18181b');
   expect(icon).toContain('#3b82f6');
+});
+
+test('no screen uses the light palette', () => {
+  // The camera view stays black with white text over the video.
+  const allowed = new Set(['src/ui/screens/ScanScreen.tsx']);
+  const light = /\b(?:bg|text|ring|border|divide|fill|stroke|accent|placeholder|from|to)-(?:white|black|zinc|emerald|green|amber|red|sky|gray|slate|neutral)(?:-\d+)?\b/g;
+  const hits: string[] = [];
+  for (const file of readdirSync('src', { recursive: true, withFileTypes: false }) as string[]) {
+    const path = `src/${file}`;
+    if (!/\.(ts|tsx)$/.test(path) || /\.test\./.test(path) || allowed.has(path)) continue;
+    readFileSync(path, 'utf8')
+      .split('\n')
+      .forEach((line, i) => {
+        for (const m of line.matchAll(light)) hits.push(`${path}:${i + 1} ${m[0]}`);
+      });
+  }
+  expect(hits).toEqual([]);
 });

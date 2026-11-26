@@ -16,7 +16,7 @@ import { formatNumber } from '../format';
 import { NUTRIENT_LABELS } from '../labels';
 import { btnPrimary, btnSecondary, card, errorText, input, sectionTitle } from '../styles';
 
-const okText = 'text-sm font-medium text-emerald-800';
+const okText = 'text-sm font-medium text-good';
 
 function TargetsForm({ current, today }: { current: TargetValues | null; today: string }) {
   const [values, setValues] = useState<Record<TargetKey, string>>(() => {
@@ -45,7 +45,7 @@ function TargetsForm({ current, today }: { current: TargetValues | null; today: 
     <section className="space-y-2">
       <h2 className={sectionTitle}>Targets</h2>
       <div className={`${card} space-y-3 p-4`}>
-        <p className="text-sm text-zinc-500">Daily targets. Each one is optional; leave a box empty for no target.</p>
+        <p className="text-sm text-muted">Daily targets. Each one is optional; leave a box empty for no target.</p>
         <div className="grid grid-cols-2 gap-3">
           {TARGET_KEYS.map((key) => (
             <Field key={key} label={NUTRIENT_LABELS[key]}>
@@ -216,7 +216,7 @@ function BackupSection() {
     <section className="space-y-2">
       <h2 className={sectionTitle}>Backup</h2>
       <div className={`${card} space-y-3 p-4`}>
-        <p className="text-sm text-zinc-500">
+        <p className="text-sm text-muted">
           {lastExportAt ? `Last backup: ${formatDayLabel(localDate(new Date(lastExportAt)))}.` : 'No backup yet.'} Everything is stored only on
           this phone, so export a backup now and then.
         </p>
@@ -268,7 +268,7 @@ function StorageSection() {
             : 'Checking storage…'}
         </p>
         {!standalone && (
-          <p className="text-sm text-zinc-600">
+          <p className="text-sm text-muted">
             Open in Safari, tap Share, then Add to Home Screen. Your data is only kept safely when you use the app from the Home Screen icon.
           </p>
         )}
@@ -290,7 +290,7 @@ export function SettingsScreen() {
       <StorageSection />
       <section className="space-y-2">
         <h2 className={sectionTitle}>Food data</h2>
-        <div className={`${card} space-y-2 p-4 text-sm text-zinc-600`}>
+        <div className={`${card} space-y-2 p-4 text-sm text-muted`}>
           <p>{INSA_SOURCE}</p>
           <p>{USDA_SOURCE}</p>
           <p>{OFF_SOURCE}</p>

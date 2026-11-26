@@ -139,7 +139,7 @@ function FoodForm({
   return (
     <Screen title={draft ? 'Check the label' : existing ? 'Edit food' : 'New food'} back={back}>
       {note && (
-        <div className="space-y-2 rounded-xl bg-amber-50 p-3 text-sm text-amber-900 ring-1 ring-amber-200">
+        <div className="space-y-2 rounded-xl bg-warn/15 p-3 text-sm text-warn ring-1 ring-warn/30">
           <p role="note">{note}</p>
           {canRetry && (
             <button type="button" className={`${btnSecondary} w-full`} disabled={retry === 'busy'} onClick={() => void tryAgain()}>
@@ -154,14 +154,14 @@ function FoodForm({
       <Field label="Brand (optional)">
         <input className={input} value={brand} onChange={(e) => setBrand(e.target.value)} />
       </Field>
-      {knownBarcode && <p className="px-1 text-sm tabular-nums text-zinc-500">{`Barcode ${knownBarcode}`}</p>}
+      {knownBarcode && <p className="px-1 text-sm tabular-nums text-muted">{`Barcode ${knownBarcode}`}</p>}
 
       <fieldset className={`${card} p-4`}>
         <legend className="sr-only">Values are</legend>
         <div className="grid grid-cols-2 gap-2">
           {(['100g', '100ml'] as const).map((option) => (
             <label key={option} className="flex min-h-11 items-center gap-2">
-              <input type="radio" name="basis" className="size-5 accent-emerald-600" checked={basis === option} onChange={() => setBasis(option)} />
+              <input type="radio" name="basis" className="size-5 accent-accent" checked={basis === option} onChange={() => setBasis(option)} />
               {option === '100g' ? 'per 100 g' : 'per 100 ml'}
             </label>
           ))}
@@ -183,10 +183,10 @@ function FoodForm({
           </Field>
         ))}
       </div>
-      <p className="text-sm text-zinc-500">Leave a box empty when the label does not say. Only calories are required.</p>
+      <p className="text-sm text-muted">Leave a box empty when the label does not say. Only calories are required.</p>
 
       <section className="space-y-2">
-        <h2 className="text-sm font-medium text-zinc-600">Servings (optional)</h2>
+        <h2 className="text-sm font-medium text-muted">Servings (optional)</h2>
         {servings.map((row, i) => (
           <div key={i} className="grid grid-cols-[1fr_6rem_2.75rem] gap-2">
             <input
@@ -207,7 +207,7 @@ function FoodForm({
             <button
               type="button"
               aria-label={`Remove serving ${i + 1}`}
-              className="flex size-11 items-center justify-center rounded-xl text-xl text-red-700 ring-1 ring-red-200"
+              className="flex size-11 items-center justify-center rounded-xl text-xl text-danger ring-1 ring-danger/30"
               onClick={() => setServings(servings.filter((_, j) => j !== i))}
             >
               <span aria-hidden="true">×</span>
@@ -274,7 +274,7 @@ export function FoodEditorScreen() {
   if (id !== 'new' && !loaded.existing) {
     return (
       <Screen title="Not found" back={mealId ? `/meal/${mealId}/add` : '/'}>
-        <p className="text-zinc-600">This food is no longer available.</p>
+        <p className="text-muted">This food is no longer available.</p>
       </Screen>
     );
   }

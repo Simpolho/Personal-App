@@ -16,14 +16,14 @@ export function RecipesScreen() {
       <Link to="/recipes/new" className={`${btnPrimary} w-full`}>
         New recipe
       </Link>
-      {recipes && recipes.length === 0 && <p className="px-1 text-zinc-500">No recipes yet.</p>}
+      {recipes && recipes.length === 0 && <p className="px-1 text-muted">No recipes yet.</p>}
       {recipes && recipes.length > 0 && (
-        <ul className={`${card} divide-y divide-zinc-200 overflow-hidden`}>
+        <ul className={`${card} divide-y divide-line overflow-hidden`}>
           {recipes.map(({ recipe, perPortion }) => (
             <li key={recipe.id}>
               <Link to={`/recipes/${recipe.id}`} className={row}>
                 <span>{recipe.name}</span>
-                <span className="shrink-0 text-sm tabular-nums text-zinc-500">
+                <span className="shrink-0 text-sm tabular-nums text-muted">
                   {`${formatNutrient('kcal', perPortion.kcal ?? 0)} kcal per portion`}
                 </span>
               </Link>

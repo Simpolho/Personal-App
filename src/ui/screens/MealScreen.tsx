@@ -48,7 +48,7 @@ function EntryEditor({ entry, mealId, onDone }: { entry: LogEntry; mealId: strin
   }
 
   return (
-    <div className="space-y-3 bg-zinc-50 px-4 py-3">
+    <div className="space-y-3 bg-raised/40 px-4 py-3">
       {!isQuick && (
         <div className="flex items-end gap-2">
           <div className="flex-1">
@@ -64,7 +64,7 @@ function EntryEditor({ entry, mealId, onDone }: { entry: LogEntry; mealId: strin
               />
             </Field>
           </div>
-          <span className="pb-2.5 text-zinc-600">{unitLabel(entry.unit)}</span>
+          <span className="pb-2.5 text-muted">{unitLabel(entry.unit)}</span>
         </div>
       )}
       {error && <p role="alert" className={errorText}>{error}</p>}
@@ -157,7 +157,7 @@ export function MealScreen() {
             iPhone Safari draws the time inside a native box it won't centre. The time shown is
             ours; the real time input lies invisibly on top, so a tap still opens the picker.
           */}
-          <div className="relative rounded-xl focus-within:ring-2 focus-within:ring-emerald-600">
+          <div className="relative rounded-xl focus-within:ring-2 focus-within:ring-accent">
             <div aria-hidden="true" className={`${input} flex items-center justify-center tabular-nums`}>
               {meal.time}
             </div>
@@ -179,9 +179,9 @@ export function MealScreen() {
 
       <section className={`${card} overflow-hidden`}>
         {entries.length === 0 ? (
-          <p className="p-4 text-zinc-500">No foods in this meal yet.</p>
+          <p className="p-4 text-muted">No foods in this meal yet.</p>
         ) : (
-          <ul className="divide-y divide-zinc-200">
+          <ul className="divide-y divide-line">
             {entries.map((entry) => {
               const amount = describeAmount(entry.amount, entry.unit);
               const open = editing === entry.id;
@@ -190,9 +190,9 @@ export function MealScreen() {
                   <button type="button" className={row} aria-expanded={open} onClick={() => setEditing(open ? null : entry.id)}>
                     <span>
                       <span className="block">{entry.nameSnapshot}</span>
-                      {amount && <span className="block text-sm text-zinc-500">{amount}</span>}
+                      {amount && <span className="block text-sm text-muted">{amount}</span>}
                     </span>
-                    <span className="shrink-0 tabular-nums text-zinc-600">
+                    <span className="shrink-0 tabular-nums text-muted">
                       {`${formatNutrient('kcal', entry.nutrientsSnapshot.kcal)} kcal`}
                     </span>
                   </button>
@@ -202,7 +202,7 @@ export function MealScreen() {
             })}
           </ul>
         )}
-        <p className="border-t border-zinc-200 bg-zinc-50 px-4 py-2 text-sm tabular-nums text-zinc-600">
+        <p className="border-t border-line bg-raised/40 px-4 py-2 text-sm tabular-nums text-muted">
           {`Total ${formatNutrient('kcal', totals.kcal ?? 0)} kcal · P ${formatWhole(totals.protein ?? 0)} g · C ${formatWhole(totals.carbs ?? 0)} g · F ${formatWhole(totals.fat ?? 0)} g`}
         </p>
       </section>
@@ -230,7 +230,7 @@ export function MealScreen() {
           </div>
         </section>
       )}
-      {savedNote && <p role="status" className="text-sm text-emerald-800">{savedNote}</p>}
+      {savedNote && <p role="status" className="text-sm text-good">{savedNote}</p>}
 
       <button type="button" className={`${btnDanger} w-full`} onClick={() => setConfirmDelete(true)}>
         Delete meal

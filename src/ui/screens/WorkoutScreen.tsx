@@ -56,7 +56,7 @@ function NumberBox({
       aria-label={label}
       aria-invalid={invalid || undefined}
       inputMode={inputMode}
-      className={`${className} ${invalid ? 'ring-2 ring-red-500' : ''}`}
+      className={`${className} ${invalid ? 'ring-2 ring-danger' : ''}`}
       value={text}
       onFocus={() => setFocused(true)}
       onBlur={() => {
@@ -87,7 +87,7 @@ function NoteBox({ exercise }: { exercise: Exercise }) {
     <input
       aria-label="Note"
       placeholder="Add a note"
-      className="min-h-11 w-full rounded-lg bg-amber-50 px-3 text-sm text-amber-950 placeholder:text-amber-700/60 focus:outline-none focus:ring-2 focus:ring-amber-400"
+      className="min-h-11 w-full rounded-lg bg-warn/15 px-3 text-sm text-warn placeholder:text-warn/60 focus:outline-none focus:ring-2 focus:ring-warn"
       value={text}
       onFocus={() => setFocused(true)}
       onChange={(e) => setText(e.target.value)}
@@ -103,7 +103,7 @@ const UNIT_LABEL = { kg: 'kg', lb: 'lb', plates: 'pl', bodyweight: 'kg' } as con
 
 /** A weight or reps box in a set row: its own width (the shared input class is full width). */
 const setBox =
-  'min-h-11 min-w-0 shrink rounded-xl border-0 bg-white px-1 text-center text-base text-zinc-900 ring-1 ring-zinc-300 focus:outline-none focus:ring-2 focus:ring-emerald-600';
+  'min-h-11 min-w-0 shrink rounded-xl border-0 bg-raised px-1 text-center text-base text-fg ring-1 ring-line-strong focus:outline-none focus:ring-2 focus:ring-accent';
 
 function SetRow({
   set,
@@ -123,8 +123,8 @@ function SetRow({
   return (
     <li className="space-y-1">
       <div className="flex items-center gap-1.5">
-        <span className={`w-7 shrink-0 text-center text-sm font-semibold ${set.warmup ? 'text-amber-700' : 'text-zinc-500'}`}>{tag}</span>
-        {unit === 'bodyweight' && <span className="text-sm text-zinc-500">+</span>}
+        <span className={`w-7 shrink-0 text-center text-sm font-semibold ${set.warmup ? 'text-warn' : 'text-muted'}`}>{tag}</span>
+        {unit === 'bodyweight' && <span className="text-sm text-muted">+</span>}
         <NumberBox
           label={`${label} weight`}
           value={set.weight}
@@ -133,8 +133,8 @@ function SetRow({
           className={`${setBox} w-[4.25rem]`}
           onValue={(weight) => onChange({ ...set, weight })}
         />
-        <span className="w-5 shrink-0 text-sm text-zinc-500">{UNIT_LABEL[unit]}</span>
-        <span className="text-zinc-400">×</span>
+        <span className="w-5 shrink-0 text-sm text-muted">{UNIT_LABEL[unit]}</span>
+        <span className="text-faint">×</span>
         <NumberBox
           label={`${label} reps`}
           value={set.reps}
@@ -148,7 +148,7 @@ function SetRow({
           aria-label={`Done ${label.toLowerCase()}`}
           aria-pressed={set.done}
           className={`ml-auto flex size-11 shrink-0 items-center justify-center rounded-xl text-xl ${
-            set.done ? 'bg-emerald-600 text-white' : 'bg-white text-zinc-400 ring-1 ring-zinc-300'
+            set.done ? 'bg-accent text-on-accent' : 'bg-raised text-faint'
           }`}
           onClick={() => onChange({ ...set, done: !set.done })}
         >
@@ -157,7 +157,7 @@ function SetRow({
         <button
           type="button"
           aria-label={`Remove ${label.toLowerCase()}`}
-          className="flex size-11 shrink-0 items-center justify-center text-zinc-400"
+          className="flex size-11 shrink-0 items-center justify-center text-faint"
           onClick={onRemove}
         >
           ✕
@@ -165,14 +165,14 @@ function SetRow({
       </div>
       {set.done && !set.warmup && (
         <div className="flex items-center gap-1.5 pl-8">
-          <span className="mr-1 text-xs text-zinc-500">RPE</span>
+          <span className="mr-1 text-xs text-muted">RPE</span>
           {RPE_VALUES.map((v) => (
             <button
               key={v}
               type="button"
               aria-label={`RPE ${v} for ${label.toLowerCase()}`}
               aria-pressed={set.rpe === v}
-              className={`min-h-11 min-w-11 rounded-lg text-sm font-medium ${set.rpe === v ? 'bg-zinc-900 text-white' : 'bg-zinc-100 text-zinc-700'}`}
+              className={`min-h-11 min-w-11 rounded-lg text-sm font-medium ${set.rpe === v ? 'bg-accent text-on-accent' : 'bg-raised text-fg'}`}
               onClick={() => onChange({ ...set, rpe: set.rpe === v ? undefined : v })}
             >
               {v}
@@ -222,14 +222,14 @@ function EntryCard({
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
           <h2 className="font-semibold">{name}</h2>
-          {entry.target && <p className="text-sm text-zinc-600">{formatTarget(entry.target)}</p>}
-          {last && last.length > 0 && <p className="text-sm text-zinc-500">{`Last: ${formatLast(last)}`}</p>}
+          {entry.target && <p className="text-sm text-muted">{formatTarget(entry.target)}</p>}
+          {last && last.length > 0 && <p className="text-sm text-muted">{`Last: ${formatLast(last)}`}</p>}
         </div>
         <button
           type="button"
           aria-label={`Options for ${name}`}
           aria-expanded={menu.open}
-          className="-mt-1 -mr-1 flex size-11 shrink-0 items-center justify-center rounded-xl text-xl text-zinc-500"
+          className="-mt-1 -mr-1 flex size-11 shrink-0 items-center justify-center rounded-xl text-xl text-muted"
           onClick={menu.onToggle}
         >
           ⋯
@@ -434,7 +434,7 @@ export function WorkoutScreen() {
   if (workout === null) {
     return (
       <Screen title="Not found" back="/workouts">
-        <p className="text-zinc-600">This workout is no longer available.</p>
+        <p className="text-muted">This workout is no longer available.</p>
       </Screen>
     );
   }
@@ -446,7 +446,7 @@ export function WorkoutScreen() {
       footer={
         inProgress ? (
           <div className="flex items-center gap-3">
-            <span aria-label="Elapsed time" className="flex-1 text-lg font-semibold tabular-nums text-zinc-700">
+            <span aria-label="Elapsed time" className="flex-1 text-lg font-semibold tabular-nums text-fg">
               {formatElapsed(workout.startedAt, now)}
             </span>
             <button type="button" className={`${btnDone} px-8`} onClick={() => void finish()}>
@@ -457,7 +457,7 @@ export function WorkoutScreen() {
       }
     >
       {unsaved && (
-        <div role="alert" className="flex items-center justify-between gap-3 rounded-xl bg-red-50 p-3 text-sm text-red-900 ring-1 ring-red-200">
+        <div role="alert" className="flex items-center justify-between gap-3 rounded-xl bg-danger/15 p-3 text-sm text-danger ring-1 ring-danger/30">
           <span>
             <strong>Not saved</strong>
             <span className="block">Your last change couldn't be saved.</span>

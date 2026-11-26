@@ -24,7 +24,7 @@ function WaterCard({ today }: { today: string }) {
     <section aria-label="Water" className={`${card} space-y-3 p-4`}>
       <div className="flex items-baseline justify-between">
         <h2 className="font-semibold">Water</h2>
-        <p className="tabular-nums text-zinc-600">{`${formatLitres(total)} / ${formatLitres(settings.targetMl)} L`}</p>
+        <p className="tabular-nums text-muted">{`${formatLitres(total)} / ${formatLitres(settings.targetMl)} L`}</p>
       </div>
       <div
         role="progressbar"
@@ -32,9 +32,9 @@ function WaterCard({ today }: { today: string }) {
         aria-valuemin={0}
         aria-valuemax={settings.targetMl}
         aria-valuenow={total}
-        className="h-2 overflow-hidden rounded-full bg-zinc-200"
+        className="h-2 overflow-hidden rounded-full bg-raised"
       >
-        <div className="h-full rounded-full bg-sky-500" style={{ width: `${Math.min(100, (total / settings.targetMl) * 100)}%` }} />
+        <div className="h-full rounded-full bg-accent-soft" style={{ width: `${Math.min(100, (total / settings.targetMl) * 100)}%` }} />
       </div>
       <div className="grid grid-cols-3 gap-2">
         <button type="button" className={btnSecondary} onClick={() => void addWater(today, settings.smallMl)}>
@@ -59,7 +59,7 @@ function WeightCard({ today }: { today: string }) {
   if (!latest) {
     return (
       <section aria-label="Weight card" className={`${card} flex items-center justify-between gap-3 p-4`}>
-        <p className="text-zinc-600">No weight yet</p>
+        <p className="text-muted">No weight yet</p>
         <Link to="/weight" className={btnPrimary}>
           Log weight
         </Link>
@@ -71,19 +71,19 @@ function WeightCard({ today }: { today: string }) {
   const weighedToday = weights.some((w) => w.date === today);
   return (
     <section aria-label="Weight card" className={`${card} overflow-hidden`}>
-      <Link to="/weight" aria-label="Weight" className="block space-y-1 p-4 active:bg-zinc-50">
+      <Link to="/weight" aria-label="Weight" className="block space-y-1 p-4 active:bg-raised">
         <div className="flex items-baseline justify-between gap-3">
           <h2 className="font-semibold">Weight</h2>
           <p className="text-xl font-semibold tabular-nums">{`${formatKg(latest.kg)} kg`}</p>
         </div>
-        <p className="flex justify-between gap-3 text-sm tabular-nums text-zinc-600">
+        <p className="flex justify-between gap-3 text-sm tabular-nums text-muted">
           <span>{avg !== null ? `7-day avg ${formatKg(avg)} kg` : '7-day avg –'}</span>
           {change !== null && <span>{`${formatChange(change)} kg/wk`}</span>}
         </p>
       </Link>
       {!weighedToday && (
-        <div className="flex items-center justify-between gap-3 border-t border-amber-200 bg-amber-50 px-4 py-2">
-          <p className="text-sm font-medium text-amber-900">Not weighed today</p>
+        <div className="flex items-center justify-between gap-3 border-t border-warn/30 bg-warn/15 px-4 py-2">
+          <p className="text-sm font-medium text-warn">Not weighed today</p>
           <Link to="/weight" className={btnPrimary}>
             Log weight
           </Link>
@@ -132,10 +132,10 @@ export function HomeScreen() {
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-md flex-col">
-      <header className="sticky top-0 z-10 border-b border-zinc-200 bg-white/95 pt-[env(safe-area-inset-top)] backdrop-blur">
+      <header className="sticky top-0 z-10 border-b border-line bg-page/95 pt-[env(safe-area-inset-top)] backdrop-blur">
         <div className="flex min-h-12 items-center justify-between px-4">
           <h1 className="text-lg font-semibold">{formatDayLabel(today)}</h1>
-          <Link to="/settings" aria-label="Settings" className="flex size-11 items-center justify-center text-2xl text-zinc-600">
+          <Link to="/settings" aria-label="Settings" className="flex size-11 items-center justify-center text-2xl text-muted">
             <span aria-hidden="true">⚙</span>
           </Link>
         </div>
@@ -143,7 +143,7 @@ export function HomeScreen() {
 
       <main className="flex-1 space-y-4 p-4 pb-[calc(env(safe-area-inset-bottom)+1.5rem)]">
         {reminder && (
-          <Link to="/settings" className="block rounded-xl bg-amber-50 p-3 text-sm font-medium text-amber-900 ring-1 ring-amber-200">
+          <Link to="/settings" className="block rounded-xl bg-warn/15 p-3 text-sm font-medium text-warn ring-1 ring-warn/30">
             Last backup over 14 days ago — Export now
           </Link>
         )}

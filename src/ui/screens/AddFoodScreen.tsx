@@ -56,14 +56,14 @@ export function AddFoodScreen() {
       </div>
 
       {!searching && (
-        <div role="tablist" aria-label="Lists" className="grid grid-cols-3 gap-1 rounded-xl bg-zinc-200 p-1">
+        <div role="tablist" aria-label="Lists" className="grid grid-cols-3 gap-1 rounded-xl bg-raised p-1">
           {TABS.map((t) => (
             <button
               key={t.id}
               type="button"
               role="tab"
               aria-selected={tab === t.id}
-              className={`min-h-9 rounded-lg text-sm font-medium ${tab === t.id ? 'bg-white shadow-sm' : 'text-zinc-600'}`}
+              className={`min-h-9 rounded-lg text-sm font-medium ${tab === t.id ? 'bg-card text-fg' : 'text-muted'}`}
               onClick={() => setTab(t.id)}
             >
               {t.label}
@@ -73,23 +73,23 @@ export function AddFoodScreen() {
       )}
 
       {!searching && tab === 'recipes' && (
-        <Link to="/recipes" className="block px-1 text-sm font-medium text-emerald-700">
+        <Link to="/recipes" className="block px-1 text-sm font-medium text-accent-soft">
           Manage recipes
         </Link>
       )}
 
       {results && results.length === 0 && (
-        <p className="px-1 text-zinc-500">
+        <p className="px-1 text-muted">
           {searching ? 'No foods found. Try another word, or add it with “New food”.' : TABS.find((t) => t.id === tab)?.empty}
         </p>
       )}
       {results && results.length > 0 && (
-        <ul className={`${card} divide-y divide-zinc-200 overflow-hidden`}>
+        <ul className={`${card} divide-y divide-line overflow-hidden`}>
           {results.map((r) => (
             <li key={`${r.kind}:${r.ref}`}>
               <Link to={target(r)} className={row}>
                 <span>{r.name}</span>
-                <span className="shrink-0 text-sm text-zinc-500">{r.kind === 'recipe' ? 'Recipe' : (r.detail ?? '')}</span>
+                <span className="shrink-0 text-sm text-muted">{r.kind === 'recipe' ? 'Recipe' : (r.detail ?? '')}</span>
               </Link>
             </li>
           ))}

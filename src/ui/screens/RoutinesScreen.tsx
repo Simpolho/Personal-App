@@ -13,7 +13,7 @@ export function RoutinesScreen() {
       <section className="space-y-2">
         <h2 className={sectionTitle}>Routines</h2>
         {routines && routines.length > 0 && (
-          <ul className={`${card} divide-y divide-zinc-200 overflow-hidden`}>
+          <ul className={`${card} divide-y divide-line overflow-hidden`}>
             {routines.map((r) => (
               <li key={r.id}>
                 <Link to={`/routines/${r.id}`} className={row}>
@@ -30,12 +30,12 @@ export function RoutinesScreen() {
       <section className="space-y-2">
         <h2 className={sectionTitle}>Exercises</h2>
         {exercises && exercises.length > 0 && (
-          <ul className={`${card} divide-y divide-zinc-200 overflow-hidden`}>
+          <ul className={`${card} divide-y divide-line overflow-hidden`}>
             {exercises.map((e) => (
               <li key={e.id}>
                 <Link to={`/exercises/${e.id}`} aria-label={e.name} className={row}>
                   <span>{e.name}</span>
-                  <span className="text-sm text-zinc-500">{e.muscle}</span>
+                  <span className="text-sm text-muted">{e.muscle}</span>
                 </Link>
               </li>
             ))}

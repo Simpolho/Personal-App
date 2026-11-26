@@ -80,14 +80,14 @@ function RoutineForm({ existing }: { existing: Routine | null }) {
           <input className={input} value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
         <fieldset>
-          <legend className="mb-1 text-sm font-medium text-zinc-600">Planned on</legend>
+          <legend className="mb-1 text-sm font-medium text-muted">Planned on</legend>
           <div className="grid grid-cols-7 gap-1">
             {DAYS.map(([label, day]) => (
               <label key={label} className="flex min-h-11 flex-col items-center justify-center gap-1 text-sm">
                 <input
                   type="checkbox"
                   aria-label={label}
-                  className="size-5 accent-emerald-600"
+                  className="size-5 accent-accent"
                   checked={weekdays.includes(day)}
                   onChange={(e) => setWeekdays(e.target.checked ? [...weekdays, day] : weekdays.filter((d) => d !== day))}
                 />
@@ -205,7 +205,7 @@ export function RoutineEditorScreen() {
   if (id !== 'new' && !loaded.existing) {
     return (
       <Screen title="Not found" back={BACK}>
-        <p className="text-zinc-600">This routine is no longer available.</p>
+        <p className="text-muted">This routine is no longer available.</p>
       </Screen>
     );
   }

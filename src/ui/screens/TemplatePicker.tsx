@@ -32,22 +32,22 @@ export function TemplatePicker() {
     <Screen title="Repeat a saved meal" back={`/day/${date}/log`}>
       {error && <p role="alert" className={errorText}>{error}</p>}
       {templates && templates.length === 0 && (
-        <p className="text-zinc-500">No saved meals yet. Open a meal and choose “Save as saved meal”.</p>
+        <p className="text-muted">No saved meals yet. Open a meal and choose “Save as saved meal”.</p>
       )}
       {templates && templates.length > 0 && (
-        <ul className={`${card} divide-y divide-zinc-200 overflow-hidden`}>
+        <ul className={`${card} divide-y divide-line overflow-hidden`}>
           {templates.map((template) => (
             <li key={template.id} className="flex items-stretch">
               <button type="button" className={row} onClick={() => void repeat(template)}>
                 <span>{template.name}</span>
-                <span className="shrink-0 text-sm text-zinc-500">
+                <span className="shrink-0 text-sm text-muted">
                   {template.items.length === 1 ? '1 food' : `${template.items.length} foods`}
                 </span>
               </button>
               <button
                 type="button"
                 aria-label={`Delete saved meal ${template.name}`}
-                className="flex w-12 shrink-0 items-center justify-center border-l border-zinc-200 text-xl text-red-700 active:bg-zinc-50"
+                className="flex w-12 shrink-0 items-center justify-center border-l border-line text-xl text-danger active:bg-raised"
                 onClick={() => setDeleting(template)}
               >
                 <span aria-hidden="true">×</span>

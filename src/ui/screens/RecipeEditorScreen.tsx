@@ -84,9 +84,9 @@ function RecipeForm({ existing, startIngredients }: { existing: Recipe | null; s
       </div>
 
       <section className="space-y-2">
-        <h2 className="text-sm font-medium text-zinc-600">Ingredients</h2>
+        <h2 className="text-sm font-medium text-muted">Ingredients</h2>
         {ingredients.length > 0 && (
-          <ul className={`${card} divide-y divide-zinc-200 overflow-hidden`}>
+          <ul className={`${card} divide-y divide-line overflow-hidden`}>
             {ingredients.map((ingredient, index) => (
               <li key={`${ingredient.foodRef}:${index}`} className="grid grid-cols-[1fr_5.5rem_auto_2.75rem] items-center gap-2 px-4 py-2">
                 <span>{ingredient.name}</span>
@@ -100,11 +100,11 @@ function RecipeForm({ existing, startIngredients }: { existing: Recipe | null; s
                     setError('');
                   }}
                 />
-                <span className="text-zinc-500">{ingredient.unit}</span>
+                <span className="text-muted">{ingredient.unit}</span>
                 <button
                   type="button"
                   aria-label={`Remove ${ingredient.name}`}
-                  className="flex size-11 items-center justify-center text-xl text-red-700"
+                  className="flex size-11 items-center justify-center text-xl text-danger"
                   onClick={() => setIngredients(ingredients.filter((_, i) => i !== index))}
                 >
                   <span aria-hidden="true">×</span>
@@ -123,14 +123,14 @@ function RecipeForm({ existing, startIngredients }: { existing: Recipe | null; s
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        {searching && results && results.length === 0 && <p className="px-1 text-zinc-500">No foods found.</p>}
+        {searching && results && results.length === 0 && <p className="px-1 text-muted">No foods found.</p>}
         {searching && results && results.length > 0 && (
-          <ul className={`${card} divide-y divide-zinc-200 overflow-hidden`}>
+          <ul className={`${card} divide-y divide-line overflow-hidden`}>
             {results.map((r) => (
               <li key={r.ref}>
                 <button type="button" className={row} onClick={() => void addIngredient(r.ref)}>
                   <span>{r.name}</span>
-                  <span className="shrink-0 text-sm text-zinc-500">{r.detail ?? ''}</span>
+                  <span className="shrink-0 text-sm text-muted">{r.detail ?? ''}</span>
                 </button>
               </li>
             ))}
@@ -142,12 +142,12 @@ function RecipeForm({ existing, startIngredients }: { existing: Recipe | null; s
         {perPortion ? (
           <>
             <p className="text-xl font-semibold tabular-nums">{`${formatNutrient('kcal', perPortion.kcal ?? 0)} kcal per portion`}</p>
-            <p className="text-sm tabular-nums text-zinc-600">
+            <p className="text-sm tabular-nums text-muted">
               {`P ${formatWhole(perPortion.protein ?? 0)} g · C ${formatWhole(perPortion.carbs ?? 0)} g · F ${formatWhole(perPortion.fat ?? 0)} g`}
             </p>
           </>
         ) : (
-          <p className="text-zinc-500">Add ingredients and amounts to see the numbers per portion.</p>
+          <p className="text-muted">Add ingredients and amounts to see the numbers per portion.</p>
         )}
       </section>
 
@@ -199,7 +199,7 @@ export function RecipeEditorScreen() {
   if (id !== 'new' && !loaded.existing) {
     return (
       <Screen title="Not found" back="/recipes">
-        <p className="text-zinc-600">This recipe is no longer available.</p>
+        <p className="text-muted">This recipe is no longer available.</p>
       </Screen>
     );
   }

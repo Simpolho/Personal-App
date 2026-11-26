@@ -59,13 +59,13 @@ export function WorkoutsScreen() {
       )}
 
       <section aria-label="Today" className={`${card} space-y-2 p-4`}>
-        <h2 className="text-sm font-medium text-zinc-500">{`Today · ${weekdayOf(today)}`}</h2>
+        <h2 className="text-sm font-medium text-muted">{`Today · ${weekdayOf(today)}`}</h2>
         {routines !== undefined && planned.length === 0 && <p className="text-lg font-medium">Rest day</p>}
         {planned.map((r) => (
           <div key={r.id} className="flex items-center justify-between gap-3">
             <div>
               <p className="text-lg font-semibold">{r.name}</p>
-              <p className="text-sm text-zinc-500">{r.items.length === 1 ? '1 exercise' : `${r.items.length} exercises`}</p>
+              <p className="text-sm text-muted">{r.items.length === 1 ? '1 exercise' : `${r.items.length} exercises`}</p>
             </div>
             {startButton(r)}
           </div>
@@ -74,7 +74,7 @@ export function WorkoutsScreen() {
 
       <section aria-label="Other routines" className="space-y-2">
         <h2 className={sectionTitle}>Other routines</h2>
-        <ul className={`${card} divide-y divide-zinc-200 overflow-hidden`}>
+        <ul className={`${card} divide-y divide-line overflow-hidden`}>
           {others.map((r) => (
             <li key={r.id} className="flex min-h-11 items-center justify-between gap-3 px-4 py-2">
               <span className="font-medium">{r.name}</span>
@@ -92,9 +92,9 @@ export function WorkoutsScreen() {
       <section aria-label="Past workouts" className="space-y-2">
         <h2 className={sectionTitle}>Past workouts</h2>
         {history !== undefined && history.length === 0 ? (
-          <p className="px-1 text-zinc-500">None yet</p>
+          <p className="px-1 text-muted">None yet</p>
         ) : (
-          <ul className={`${card} divide-y divide-zinc-200 overflow-hidden`}>
+          <ul className={`${card} divide-y divide-line overflow-hidden`}>
             {(history ?? []).map((w) => {
               const minutes = workoutMinutes(w);
               return (

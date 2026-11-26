@@ -21,7 +21,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { failed: 
     return (
       <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-3 p-6">
         <h1 className="text-xl font-semibold">Something went wrong</h1>
-        <p className="text-zinc-600">This screen could not be shown. Your data has not been deleted.</p>
+        <p className="text-muted">This screen could not be shown. Your data has not been deleted.</p>
         <button type="button" className={btnPrimary} onClick={() => window.location.reload()}>
           Try again
         </button>

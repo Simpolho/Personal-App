@@ -68,7 +68,7 @@ function WeightForm({
           />
         </Field>
       </div>
-      {note && <p role={note.ok ? 'status' : 'alert'} className={note.ok ? 'text-sm font-medium text-emerald-800' : errorText}>{note.text}</p>}
+      {note && <p role={note.ok ? 'status' : 'alert'} className={note.ok ? 'text-sm font-medium text-good' : errorText}>{note.text}</p>}
       <button type="button" className={`${btnPrimary} w-full`} onClick={() => void save()}>
         Save weight
       </button>
@@ -117,9 +117,9 @@ export function WeightScreen() {
       <section className="space-y-2">
         <h2 className={sectionTitle}>History</h2>
         {weights.length === 0 ? (
-          <p className="px-1 text-zinc-500">No weighings yet</p>
+          <p className="px-1 text-muted">No weighings yet</p>
         ) : (
-          <ul className={`${card} divide-y divide-zinc-200 overflow-hidden`}>
+          <ul className={`${card} divide-y divide-line overflow-hidden`}>
             {[...weights].reverse().map((w) => {
               const label = formatDayLabel(w.date);
               return (

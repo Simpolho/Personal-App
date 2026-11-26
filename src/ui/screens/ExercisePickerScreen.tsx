@@ -76,12 +76,12 @@ export function ExercisePickerScreen() {
         }}
       />
       {matches.length > 0 && (
-        <ul className={`${card} divide-y divide-zinc-200 overflow-hidden`}>
+        <ul className={`${card} divide-y divide-line overflow-hidden`}>
           {matches.map((e) => (
             <li key={e.id}>
               <button type="button" aria-label={e.name} className={row} onClick={() => void pick(e.id)}>
                 <span className="font-medium">{e.name}</span>
-                <span className="text-sm text-zinc-500">{e.muscle}</span>
+                <span className="text-sm text-muted">{e.muscle}</span>
               </button>
             </li>
           ))}

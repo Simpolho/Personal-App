@@ -73,12 +73,12 @@ function AmountForm({
   return (
     <Screen title={food.name} back={`/meal/${mealId}/add`}>
       <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-zinc-500">{[detail, `per 100 ${base}`].filter(Boolean).join(' · ')}</p>
+        <p className="text-sm text-muted">{[detail, `per 100 ${base}`].filter(Boolean).join(' · ')}</p>
         <button
           type="button"
           aria-pressed={favourite}
           aria-label={favourite ? 'Remove from favourites' : 'Add to favourites'}
-          className={`flex size-11 items-center justify-center rounded-full text-2xl ${favourite ? 'text-amber-500' : 'text-zinc-400'}`}
+          className={`flex size-11 items-center justify-center rounded-full text-2xl ${favourite ? 'text-warn' : 'text-faint'}`}
           onClick={() => void setFavourite(foodRef, !favourite)}
         >
           <span aria-hidden="true">{favourite ? '★' : '☆'}</span>
@@ -144,7 +144,7 @@ export function AmountScreen() {
   if (data === null) {
     return (
       <Screen title="Not found" back={`/meal/${mealId}/add`}>
-        <p className="text-zinc-600">This food is no longer available.</p>
+        <p className="text-muted">This food is no longer available.</p>
       </Screen>
     );
   }

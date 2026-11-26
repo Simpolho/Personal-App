@@ -54,7 +54,7 @@ function PortionForm({
 
   return (
     <Screen title={recipe.name} back={`/meal/${mealId}/add`}>
-      <p className="text-sm text-zinc-500">{`Recipe · makes ${formatNumber(recipe.servings)} ${recipe.servings === 1 ? 'portion' : 'portions'}`}</p>
+      <p className="text-sm text-muted">{`Recipe · makes ${formatNumber(recipe.servings)} ${recipe.servings === 1 ? 'portion' : 'portions'}`}</p>
       <Field label="Portions">
         <input
           className={input}
@@ -94,7 +94,7 @@ export function RecipePortionScreen() {
   if (data === null) {
     return (
       <Screen title="Not found" back={`/meal/${mealId}/add`}>
-        <p className="text-zinc-600">This recipe is no longer available.</p>
+        <p className="text-muted">This recipe is no longer available.</p>
       </Screen>
     );
   }

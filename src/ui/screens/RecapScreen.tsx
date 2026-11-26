@@ -40,7 +40,7 @@ export function RecapScreen() {
   if (data === null) {
     return (
       <Screen title="Not found" back="/workouts">
-        <p className="text-zinc-600">This workout is no longer available.</p>
+        <p className="text-muted">This workout is no longer available.</p>
       </Screen>
     );
   }
@@ -58,19 +58,19 @@ export function RecapScreen() {
       }
     >
       <section className={`${card} p-4`}>
-        {compared && <p className="mb-2 text-right text-sm text-zinc-500">{`vs last ${workout.name}`}</p>}
+        {compared && <p className="mb-2 text-right text-sm text-muted">{`vs last ${workout.name}`}</p>}
         {recap.rows.length === 0 ? (
-          <p className="text-zinc-500">No sets were done.</p>
+          <p className="text-muted">No sets were done.</p>
         ) : (
-          <ul className="divide-y divide-zinc-100">
+          <ul className="divide-y divide-line">
             {recap.rows.map((r) => {
               const delta = change(r.change);
               return (
                 <li key={r.muscle} aria-label={r.muscle} className="grid grid-cols-[1fr_auto_auto_3.5rem] items-center gap-3 py-2 tabular-nums">
                   <span className="font-medium">{r.muscle}</span>
-                  <span className="text-zinc-500">{r.sets === 1 ? '1 set' : `${r.sets} sets`}</span>
+                  <span className="text-muted">{r.sets === 1 ? '1 set' : `${r.sets} sets`}</span>
                   <span className="text-right">{`${kg(r.volume)} kg`}</span>
-                  <span className={`text-right text-sm font-medium ${delta?.startsWith('▲') ? 'text-emerald-700' : delta?.startsWith('▼') ? 'text-red-700' : 'text-zinc-500'}`}>
+                  <span className={`text-right text-sm font-medium ${delta?.startsWith('▲') ? 'text-good' : delta?.startsWith('▼') ? 'text-danger' : 'text-muted'}`}>
                     {delta}
                   </span>
                 </li>
@@ -80,7 +80,7 @@ export function RecapScreen() {
         )}
       </section>
       {recap.leftOut.map((l) => (
-        <p key={l.name} className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900 ring-1 ring-amber-200">{`${l.name} ${LEFT_OUT[l.reason]}`}</p>
+        <p key={l.name} className="rounded-xl bg-warn/15 p-3 text-sm text-warn ring-1 ring-warn/30">{`${l.name} ${LEFT_OUT[l.reason]}`}</p>
       ))}
     </Screen>
   );

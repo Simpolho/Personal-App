@@ -1,8 +1,28 @@
 @import "tailwindcss";
 
+/* The app is always dark: a gray base and a blue accent. Screens use these names (bg-card,
+   text-muted, bg-accent …), never raw palette colours; scripts/theme.test.ts checks both. */
+@theme {
+  --color-page: #18181b;
+  --color-card: #27272a;
+  --color-raised: #3f3f46;
+  --color-line: #3f3f46;
+  --color-line-strong: #52525b;
+  --color-fg: #f4f4f5;
+  --color-muted: #a1a1aa;
+  --color-faint: #71717a;
+  --color-accent: #3b82f6;
+  --color-accent-soft: #60a5fa;
+  --color-on-accent: #09090b;
+  --color-warn: #fbbf24;
+  --color-danger: #f87171;
+  --color-good: #4ade80;
+}
+
 html {
-  background-color: var(--color-zinc-100);
-  color: var(--color-zinc-900);
+  color-scheme: dark;
+  background-color: var(--color-page);
+  color: var(--color-fg);
   -webkit-text-size-adjust: 100%;
   -webkit-tap-highlight-color: transparent;
 }

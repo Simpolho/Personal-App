@@ -17,7 +17,7 @@ He wants a simple **Training day | Rest day** switch for each day. The switch on
   - the food log day's totals card
   - the amount screen's "left after this" line
   - the recipe portion screen
-- **Starting choice:** a day nobody has switched starts on the weekly plan. If a live routine is scheduled on that weekday, it starts on Training day; otherwise Rest day. Once tapped, the saved choice wins, including on past days.
+- **Starting choice:** a day nobody has switched starts on the weekly plan. If a live routine is scheduled on that weekday, it starts on Training day; otherwise Rest day. Once tapped, the saved choice wins, including on past days. Once food is logged on a day, the day keeps the kind the plan gave it at that moment, so changing the weekly plan later doesn't change past days' targets (added after the final review).
 - **One set still works.** If every Rest day box is empty, every day uses the Training day set, exactly as today, and the switch is hidden.
 - **Past days keep their targets.** Changing targets in Settings still applies from today on. A past day uses the targets in force on that date and that day's own choice.
 - **Backups** carry both the rest-day set and each day's choice. Backups made before this change still import, as one set for every day with no saved choices.

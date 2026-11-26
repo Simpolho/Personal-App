@@ -2,8 +2,8 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { db } from '../../db/db';
-import { firstEntryAt, getDay, removeEmptyMeals } from '../../db/log';
-import { getTargetsFor } from '../../db/targets';
+import { firstEntryAt, getDay, removeEmptyMeals, setDayKind } from '../../db/log';
+import { getDayTargets } from '../../db/targets';
 import { addWater, getWaterSettings, undoWater, waterTotal } from '../../db/water';
 import { listWeights } from '../../db/weight';
 import { getActiveWorkout } from '../../db/workouts';
@@ -123,7 +123,7 @@ export function HomeScreen() {
     void removeEmptyMeals(today);
   }, [today]);
   const day = useLiveQuery(() => getDay(today), [today]);
-  const targets = useLiveQuery(() => getTargetsFor(today), [today]);
+  const dayTargets = useLiveQuery(() => getDayTargets(today), [today]);
   const reminder =
     useLiveQuery(async () => {
       const lastExportAt = (await db.settings.get('settings'))?.lastExportAt;
@@ -155,7 +155,13 @@ export function HomeScreen() {
             </Link>
           </section>
         )}
-        <TotalsCard totals={day?.totals ?? {}} targets={targets ?? null} loading={day === undefined || targets === undefined} />
+        <TotalsCard
+          totals={day?.totals ?? {}}
+          targets={dayTargets?.targets ?? null}
+          loading={day === undefined || dayTargets === undefined}
+          kind={dayTargets?.split ? dayTargets.kind : undefined}
+          onKindChange={(kind) => void setDayKind(today, kind)}
+        />
         <WaterCard today={today} />
         <WeightCard today={today} />
         <nav className="space-y-2">

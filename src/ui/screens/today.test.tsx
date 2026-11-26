@@ -2,7 +2,7 @@ import { screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
 import { db, resetDb } from '../../db/db';
 import { createMeal, getDay, quickAdd } from '../../db/log';
-import { setTargets } from '../../db/targets';
+import { getDayTargets, setTargets } from '../../db/targets';
 import { renderAt, user } from '../../test/render';
 
 beforeEach(async () => {
@@ -110,4 +110,14 @@ test('at 00:30 the app opens on the new date and a meal logged then belongs to i
   await screen.findByPlaceholderText('Search foods');
   const day = await getDay('2026-07-02');
   expect(day.meals.map((x) => [x.meal.date, x.meal.time])).toEqual([['2026-07-02', '00:30']]);
+});
+test('a past day can be switched from the food log', async () => {
+  await setTargets('2026-11-01', { kcal: 2400 }, { kcal: 2000 });
+  renderAt('#/day/2026-11-15');
+  expect(await screen.findByText('0 / 2000 kcal')).toBeInTheDocument();
+  expect(screen.getByRole('radio', { name: 'Rest day' })).toHaveAttribute('aria-checked', 'true');
+  await user.click(screen.getByRole('radio', { name: 'Training day' }));
+  expect(await screen.findByText('0 / 2400 kcal')).toBeInTheDocument();
+  expect((await getDayTargets('2026-11-15')).kind).toBe('training');
+  expect((await getDayTargets('2026-11-16')).kind).toBe('rest');
 });

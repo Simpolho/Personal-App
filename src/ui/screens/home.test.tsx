@@ -5,6 +5,7 @@ import { createMeal, quickAdd } from '../../db/log';
 import { addWater, waterTotal } from '../../db/water';
 import { logWeight } from '../../db/weight';
 import { saveExercise, saveRoutine } from '../../db/workouts';
+import { getDayTargets, setTargets } from '../../db/targets';
 import { renderAt, user } from '../../test/render';
 
 beforeEach(async () => {
@@ -102,4 +103,24 @@ test('opening the app after midnight shows the new day, with no water yet', asyn
   expect(await screen.findByRole('heading', { name: 'Tue 24 Nov' })).toBeInTheDocument();
   expect(await screen.findByText('0 / 2 L')).toBeInTheDocument();
   expect(screen.getByText('Not weighed today')).toBeInTheDocument();
+});
+test('on a planned training day Home starts on Training day, and Rest day switches the targets', async () => {
+  await saveRoutine({ name: 'Upper', weekdays: [1], items: [] });
+  await setTargets('2026-11-01', { kcal: 2400 }, { kcal: 2000 });
+  await quickAdd((await createMeal('2026-11-23')).id, undefined, { kcal: 1000 });
+  renderAt('#/');
+  expect(await screen.findByText('1000 / 2400 kcal')).toBeInTheDocument();
+  expect(screen.getByRole('radio', { name: 'Training day' })).toHaveAttribute('aria-checked', 'true');
+  expect(screen.getByRole('radio', { name: 'Rest day' })).toHaveAttribute('aria-checked', 'false');
+  await user.click(screen.getByRole('radio', { name: 'Rest day' }));
+  expect(await screen.findByText('1000 / 2000 kcal')).toBeInTheDocument();
+  expect((await getDayTargets('2026-11-23')).kind).toBe('rest');
+});
+test('without rest-day targets there is no switch', async () => {
+  renderAt('#/');
+  await waitFor(() => expect(screen.getByRole('region', { name: 'Totals' })).toHaveAttribute('aria-busy', 'false'));
+  expect(screen.queryByRole('radiogroup', { name: 'Kind of day' })).toBeNull();
+  await setTargets('2026-11-01', { kcal: 2300 });
+  expect(await screen.findByText('0 / 2300 kcal')).toBeInTheDocument();
+  expect(screen.queryByRole('radiogroup', { name: 'Kind of day' })).toBeNull();
 });

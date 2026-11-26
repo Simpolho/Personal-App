@@ -2,7 +2,7 @@ import { screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
 import { db, resetDb } from '../../db/db';
 import { getFood, getUsage, listFoods, saveFood } from '../../db/foods';
-import { createMeal, getDay, logFood, quickAdd } from '../../db/log';
+import { createMeal, getDay, logFood, quickAdd, setDayKind } from '../../db/log';
 import { saveRecipe } from '../../db/recipes';
 import { setTargets } from '../../db/targets';
 import type { Meal, TableFood } from '../../db/types';
@@ -49,6 +49,13 @@ test('"Left after this" only with targets, only for set ones', async () => {
   expect(screen.queryByText(/Left after this/)).toBeNull();
   await setTargets('2026-11-01', { kcal: 2300 });
   expect(await screen.findByText('Left after this: 1921 kcal')).toBeInTheDocument();
+});
+test('"Left after this" uses the day\'s targets', async () => {
+  await setTargets('2026-11-01', { kcal: 2400 }, { kcal: 2000 }); // no routines → 16 Nov is a rest day
+  renderAt(`#/meal/${meal.id}/add/usda:173904`);
+  expect(await screen.findByText('Left after this: 1621 kcal')).toBeInTheDocument();
+  await setDayKind('2026-11-16', 'training');
+  expect(await screen.findByText('Left after this: 2021 kcal')).toBeInTheDocument();
 });
 test('empty amount shows an error and logs nothing', async () => {
   renderAt(`#/meal/${meal.id}/add/usda:173904`);

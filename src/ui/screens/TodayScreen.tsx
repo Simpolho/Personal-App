@@ -1,8 +1,8 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
-import { getDay, removeEmptyMeals, setDayComplete } from '../../db/log';
-import { getTargetsFor } from '../../db/targets';
+import { getDay, removeEmptyMeals, setDayComplete, setDayKind } from '../../db/log';
+import { getDayTargets } from '../../db/targets';
 import { addDays, formatDayLabel, localDate } from '../../domain/dates';
 import { formatNutrient } from '../../domain/nutrients';
 import { TotalsCard } from '../components/TotalsCard';
@@ -17,7 +17,7 @@ export function TodayScreen() {
   const valid = /^\d{4}-\d{2}-\d{2}$/.test(date);
 
   const day = useLiveQuery(() => (valid ? getDay(date) : undefined), [date, valid]);
-  const targets = useLiveQuery(() => (valid ? getTargetsFor(date) : null), [date, valid]);
+  const dayTargets = useLiveQuery(() => (valid ? getDayTargets(date) : null), [date, valid]);
 
   // A meal left with nothing in it (New meal, then back) doesn't stay on the day.
   useEffect(() => {
@@ -55,7 +55,13 @@ export function TodayScreen() {
       </header>
 
       <main className="flex-1 space-y-4 p-4 pb-32">
-        <TotalsCard totals={day?.totals ?? {}} targets={targets ?? null} loading={day === undefined || targets === undefined} />
+        <TotalsCard
+          totals={day?.totals ?? {}}
+          targets={dayTargets?.targets ?? null}
+          loading={day === undefined || dayTargets === undefined}
+          kind={dayTargets?.split ? dayTargets.kind : undefined}
+          onKindChange={(kind) => void setDayKind(date, kind)}
+        />
 
         {day === undefined ? null : meals.length === 0 ? (
           <p className="px-1 text-muted">Nothing logged yet.</p>

@@ -1,7 +1,9 @@
+import type { DayKind } from '../../db/types';
 import { formatNutrient, type Nutrients } from '../../domain/nutrients';
 import type { TargetKey, TargetValues } from '../../domain/targets';
 import { formatWhole } from '../format';
 import { card } from '../styles';
+import { DayKindSwitch } from './DayKindSwitch';
 
 const MACROS: { key: Exclude<TargetKey, 'kcal'>; label: string }[] = [
   { key: 'protein', label: 'Protein' },
@@ -28,12 +30,28 @@ function Bar({ label, value, max }: { label: string; value: number; max: number 
   );
 }
 
-/** The day's calories and macros. Bars and "x / y" appear only for the targets that are set. */
-export function TotalsCard({ totals, targets, loading = false }: { totals: Nutrients; targets: TargetValues | null; loading?: boolean }) {
+/**
+ * The day's calories and macros. Bars and "x / y" appear only for the targets that are set.
+ * With `kind` and `onKindChange`, the Training day / Rest day switch sits at the top.
+ */
+export function TotalsCard({
+  totals,
+  targets,
+  loading = false,
+  kind,
+  onKindChange,
+}: {
+  totals: Nutrients;
+  targets: TargetValues | null;
+  loading?: boolean;
+  kind?: DayKind;
+  onKindChange?: (kind: DayKind) => void;
+}) {
   const kcal = totals.kcal ?? 0;
   const kcalTarget = targets?.kcal;
   return (
     <section aria-label="Totals" aria-busy={loading} className={`${card} space-y-3 p-4`}>
+      {kind && onKindChange && <DayKindSwitch kind={kind} onChange={onKindChange} />}
       <div className="space-y-2">
         <p className="text-2xl font-semibold tabular-nums">
           {kcalTarget !== undefined

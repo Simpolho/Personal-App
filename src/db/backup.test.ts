@@ -2,8 +2,8 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import { exportAll, importAll, ImportError, RECORD_TABLES, setLastExportAt } from './backup';
 import { db, resetDb } from './db';
 import { listFoods, saveFood } from './foods';
-import { createMeal, deleteEntry, getDay, logFood, quickAdd, setDayComplete } from './log';
-import { setTargets } from './targets';
+import { createMeal, deleteEntry, getDay, logFood, quickAdd, setDayComplete, setDayKind } from './log';
+import { getTargetSetsFor, setTargets } from './targets';
 import { addWater, getWaterSettings, setWaterSettings, waterTotal } from './water';
 import { listWeights, logWeight } from './weight';
 import { finishWorkout, saveExercise, saveRoutine, saveWorkout, startWorkout } from './workouts';
@@ -135,4 +135,24 @@ test('a backup from before workouts still imports, and a damaged workout is refu
     records: { workouts: [{ id: 'w', createdAt: 'x', updatedAt: 'x', date: '2026-11-23', name: 'Upper A', startedAt: 'x', entries: 'none', exerciseIds: [] }] },
   };
   await expect(importAll(bad)).rejects.toBeInstanceOf(ImportError);
+});
+test('a rest-day set and day choices go through a backup and back', async () => {
+  await setTargets('2026-11-01', { kcal: 2400 }, { kcal: 2000 });
+  await setDayKind('2026-11-16', 'rest');
+  const file = await exportAll();
+  await resetDb();
+  await importAll(JSON.parse(JSON.stringify(file)));
+  expect(await getTargetSetsFor('2026-11-16')).toEqual({ main: { kcal: 2400 }, rest: { kcal: 2000 } });
+  expect(await db.days.get('2026-11-16')).toMatchObject({ kind: 'rest', complete: false });
+});
+test('a damaged day choice or rest set is refused', async () => {
+  const base = { id: 'x', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' };
+  const file = (records: object) => ({ format: 'fitness-app-export', version: 1, exportedAt: '', records });
+  const bad = [
+    { days: [{ ...base, date: '2026-01-01', complete: false, kind: 'gym' }] },
+    { targets: [{ ...base, effectiveFrom: '2026-01-01', kcal: 2000, rest: { kcal: 'x' } }] },
+    { targets: [{ ...base, effectiveFrom: '2026-01-01', rest: 'none' }] },
+  ];
+  for (const records of bad) await expect(importAll(file(records))).rejects.toBeInstanceOf(ImportError);
+  expect((await db.days.count()) + (await db.targets.count())).toBe(0);
 });

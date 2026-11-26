@@ -67,6 +67,8 @@ const isNutrients = (v: unknown) => isObject(v) && Object.values(v).every((x) =>
 const isListOf = (v: unknown, check: (item: Record<string, unknown>) => boolean) =>
   Array.isArray(v) && v.every((item) => isObject(item) && check(item));
 
+const isTargetSet = (r: Record<string, unknown>) => ['kcal', 'protein', 'carbs', 'fat'].every((k) => r[k] === undefined || isNumber(r[k]));
+
 /** What each kind of record must contain for the screens to be able to show it. */
 const SHAPES: Record<RecordTable, (r: Record<string, unknown>) => boolean> = {
   foods: (r) =>
@@ -87,9 +89,12 @@ const SHAPES: Record<RecordTable, (r: Record<string, unknown>) => boolean> = {
           ? isString(i.recipeRef) && isNumber(i.amount)
           : i.kind === 'quick' && isString(i.name) && isNutrients(i.nutrients),
     ),
-  days: (r) => isString(r.date) && typeof r.complete === 'boolean',
+  days: (r) => isString(r.date) && typeof r.complete === 'boolean' && (r.kind === undefined || r.kind === 'training' || r.kind === 'rest'),
   logEntries: (r) => isString(r.mealId) && isString(r.nameSnapshot) && isNumber(r.amount) && isString(r.unit) && isNutrients(r.nutrientsSnapshot),
-  targets: (r) => isString(r.effectiveFrom) && ['kcal', 'protein', 'carbs', 'fat'].every((k) => r[k] === undefined || isNumber(r[k])),
+  targets: (r) =>
+    isString(r.effectiveFrom) &&
+    isTargetSet(r) &&
+    (r.rest === undefined || (isObject(r.rest) && isTargetSet(r.rest))),
   settings: (r) =>
     (r.lastExportAt === undefined || isString(r.lastExportAt)) &&
     ['waterTargetMl', 'waterSmallMl', 'waterLargeMl'].every((k) => r[k] === undefined || isNumber(r[k])),

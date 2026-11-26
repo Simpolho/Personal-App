@@ -69,10 +69,14 @@ export interface MealTemplate extends BaseRecord {
   items: TemplateItem[];
 }
 
+export type DayKind = 'training' | 'rest';
+
 /** `id === date`. */
 export interface Day extends BaseRecord {
   date: string;
   complete: boolean;
+  /** Training or rest day, once the user has chosen. Absent: the weekly plan decides. */
+  kind?: DayKind;
 }
 
 export interface LogEntry extends BaseRecord {
@@ -91,10 +95,13 @@ export interface LogEntry extends BaseRecord {
 export interface Targets extends BaseRecord {
   /** Local YYYY-MM-DD from which these targets apply. */
   effectiveFrom: string;
+  /** The fields above are the Training day set (or the only set, when `rest` has no values). */
   kcal?: number;
   protein?: number;
   carbs?: number;
   fat?: number;
+  /** The Rest day set. Absent or empty: every day uses the set above. */
+  rest?: Partial<Record<'kcal' | 'protein' | 'carbs' | 'fat', number>>;
 }
 
 /** One per day: `id === date`. */

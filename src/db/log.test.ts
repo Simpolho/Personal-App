@@ -14,6 +14,7 @@ import {
   removeEmptyMeals,
   renameMeal,
   setDayComplete,
+  setDayKind,
   setMealTime,
   updateEntryAmount,
   updateQuickAdd,
@@ -120,6 +121,15 @@ test('deleteMeal removes the meal and its entries from the day', async () => {
 test('setDayComplete persists', async () => {
   await setDayComplete('2026-11-16', true);
   expect((await getDay('2026-11-16')).complete).toBe(true);
+});
+test("setDayKind and setDayComplete keep each other's value", async () => {
+  await setDayKind('2026-11-16', 'rest');
+  expect(await db.days.get('2026-11-16')).toMatchObject({ kind: 'rest', complete: false });
+  expect((await getDay('2026-11-16')).complete).toBe(false);
+  await setDayComplete('2026-11-16', true);
+  expect(await db.days.get('2026-11-16')).toMatchObject({ kind: 'rest', complete: true });
+  await setDayKind('2026-11-16', 'training');
+  expect(await db.days.get('2026-11-16')).toMatchObject({ kind: 'training', complete: true });
 });
 test('firstEntryAt is the earliest live entry', async () => {
   expect(await firstEntryAt()).toBeUndefined();

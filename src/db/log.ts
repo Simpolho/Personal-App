@@ -3,7 +3,7 @@ import { amountInBase, scaleNutrients, scaleSnapshot, sumNutrients, type Nutrien
 import { db } from './db';
 import { cleanNutrients, getFood, recordUsage } from './foods';
 import { isLive, newRecord, softDeleted, touched } from './records';
-import type { LogEntry, Meal } from './types';
+import type { DayKind, LogEntry, Meal } from './types';
 
 export interface MealView {
   meal: Meal;
@@ -198,6 +198,17 @@ export async function setDayComplete(date: string, complete: boolean): Promise<v
     await db.days.put(touched({ ...rest, complete }));
   } else {
     await db.days.put(newRecord({ id: date, date, complete }));
+  }
+}
+
+/** Saves whether the day is a training or rest day. Keeps the day's "complete" tick as it is. */
+export async function setDayKind(date: string, kind: DayKind): Promise<void> {
+  const existing = await db.days.get(date);
+  if (existing) {
+    const { deletedAt: _undeleted, ...rest } = existing;
+    await db.days.put(touched({ ...rest, kind }));
+  } else {
+    await db.days.put(newRecord({ id: date, date, complete: false, kind }));
   }
 }
 

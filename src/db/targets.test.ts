@@ -1,6 +1,6 @@
 import { beforeEach, expect, test } from 'vitest';
 import { resetDb } from './db';
-import { setDayKind } from './log';
+import { createMeal, quickAdd, setDayKind } from './log';
 import { getDayTargets, getTargetSetsFor, getTargetsFor, listTargets, setTargets } from './targets';
 import { deleteRoutine, saveRoutine } from './workouts';
 
@@ -43,4 +43,12 @@ test('a deleted routine does not make a training day', async () => {
 test('with one set there is no switch and every day uses it', async () => {
   await setTargets('2026-11-01', { kcal: 2300 });
   expect(await getDayTargets('2026-11-17')).toEqual({ targets: { kcal: 2300 }, kind: 'rest', split: false });
+});
+test('a day with food keeps its kind when the weekly plan changes later', async () => {
+  const upper = await saveRoutine({ name: 'Upper', weekdays: [1], items: [] });
+  await setTargets('2026-11-01', { kcal: 2400 }, { kcal: 2000 });
+  await quickAdd((await createMeal('2026-11-16')).id, undefined, { kcal: 500 });
+  await saveRoutine({ name: 'Upper', weekdays: [2], items: [] }, upper.id);
+  expect(await getDayTargets('2026-11-16')).toEqual({ targets: { kcal: 2400 }, kind: 'training', split: true });
+  expect((await getDayTargets('2026-11-23')).kind).toBe('rest'); // no food: follows the new plan
 });

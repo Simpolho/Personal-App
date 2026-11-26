@@ -1,9 +1,11 @@
 import { localTime } from '../domain/dates';
 import { amountInBase, scaleNutrients, scaleSnapshot, sumNutrients, type Nutrients } from '../domain/nutrients';
+import { dayKindFor } from '../domain/targets';
 import { db } from './db';
 import { cleanNutrients, getFood, recordUsage } from './foods';
 import { isLive, newRecord, softDeleted, touched } from './records';
 import type { DayKind, LogEntry, Meal } from './types';
+import { listRoutines } from './workouts';
 
 export interface MealView {
   meal: Meal;
@@ -45,6 +47,7 @@ export async function createMeal(date: string, now: Date = new Date()): Promise<
   const names = (await liveMeals(date)).map((m) => m.name);
   const meal: Meal = newRecord({ date, name: nextMealName(names), time: localTime(now) });
   await db.meals.add(meal);
+  await keepDayKind(date);
   return meal;
 }
 
@@ -210,6 +213,16 @@ export async function setDayKind(date: string, kind: DayKind): Promise<void> {
   } else {
     await db.days.put(newRecord({ id: date, date, complete: false, kind }));
   }
+}
+
+/**
+ * Once food goes on a day, the day keeps the kind the weekly plan gives it now, so a later change
+ * to the plan doesn't change that day's targets. A day already switched by hand is left alone.
+ */
+export async function keepDayKind(date: string): Promise<void> {
+  const existing = await db.days.get(date);
+  if (existing && isLive(existing) && existing.kind) return;
+  await setDayKind(date, dayKindFor(undefined, await listRoutines(), date));
 }
 
 /** When the first entry still in the log was made; the backup reminder counts from here. */

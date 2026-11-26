@@ -1,6 +1,6 @@
 import { localTime } from '../domain/dates';
 import { db } from './db';
-import { getMealView, logFood, quickAdd } from './log';
+import { getMealView, keepDayKind, logFood, quickAdd } from './log';
 import { isLive, newRecord, softDeleted } from './records';
 import { logRecipe } from './recipes';
 import type { Meal, MealTemplate, TemplateItem } from './types';
@@ -35,7 +35,7 @@ export async function deleteTemplate(id: string): Promise<void> {
 export async function applyTemplate(templateId: string, date: string, now: Date = new Date()): Promise<Meal> {
   const template = await db.mealTemplates.get(templateId);
   if (!template || !isLive(template)) throw new Error('Saved meal not found');
-  return db.transaction('rw', [db.meals, db.logEntries, db.foodUsage, db.foods, db.tableFoods, db.recipes], async () => {
+  const created = await db.transaction('rw', [db.meals, db.logEntries, db.foodUsage, db.foods, db.tableFoods, db.recipes], async () => {
     const meal: Meal = newRecord({ date, name: template.name, time: localTime(now) });
     await db.meals.add(meal);
     for (const item of template.items) {
@@ -45,4 +45,6 @@ export async function applyTemplate(templateId: string, date: string, now: Date 
     }
     return meal;
   });
+  await keepDayKind(date);
+  return created;
 }

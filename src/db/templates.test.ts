@@ -2,6 +2,8 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import { db, resetDb } from './db';
 import { createMeal, getDay, logFood, quickAdd } from './log';
 import { applyTemplate, deleteTemplate, listTemplates, saveMealAsTemplate } from './templates';
+import { getDayTargets } from './targets';
+import { saveRoutine } from './workouts';
 
 beforeEach(async () => {
   await resetDb();
@@ -43,4 +45,13 @@ test('a template that cannot be fully repeated adds nothing', async () => {
   await db.tableFoods.delete('usda:173904'); // e.g. a table update dropped the food
   await expect(applyTemplate(t.id, '2026-11-17')).rejects.toThrow();
   expect((await getDay('2026-11-17')).meals).toEqual([]);
+});
+test('a day filled from a saved meal keeps its kind when the weekly plan changes later', async () => {
+  const m = await createMeal('2026-11-16');
+  await quickAdd(m.id, 'Coffee', { kcal: 5 });
+  const t = await saveMealAsTemplate(m.id, 'Usual breakfast');
+  const lower = await saveRoutine({ name: 'Lower', weekdays: [2], items: [] });
+  await applyTemplate(t.id, '2026-11-17');
+  await saveRoutine({ name: 'Lower', weekdays: [4], items: [] }, lower.id);
+  expect((await getDayTargets('2026-11-17')).kind).toBe('training');
 });

@@ -56,7 +56,7 @@ function NumberBox({
       aria-label={label}
       aria-invalid={invalid || undefined}
       inputMode={inputMode}
-      className={`${className} ${invalid ? 'ring-2 ring-danger' : ''}`}
+      className={`${className} ${invalid ? 'ring-2 ring-danger focus:ring-danger' : ''}`}
       value={text}
       onFocus={() => setFocused(true)}
       onBlur={() => {
@@ -87,7 +87,7 @@ function NoteBox({ exercise }: { exercise: Exercise }) {
     <input
       aria-label="Note"
       placeholder="Add a note"
-      className="min-h-11 w-full rounded-lg bg-warn/15 px-3 text-sm text-warn placeholder:text-warn/60 focus:outline-none focus:ring-2 focus:ring-warn"
+      className="min-h-11 w-full rounded-lg bg-warn/10 px-3 text-sm text-warn placeholder:text-warn/50 focus:outline-none focus:ring-2 focus:ring-warn"
       value={text}
       onFocus={() => setFocused(true)}
       onChange={(e) => setText(e.target.value)}

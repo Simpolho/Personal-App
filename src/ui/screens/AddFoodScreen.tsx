@@ -56,14 +56,14 @@ export function AddFoodScreen() {
       </div>
 
       {!searching && (
-        <div role="tablist" aria-label="Lists" className="grid grid-cols-3 gap-1 rounded-xl bg-raised p-1">
+        <div role="tablist" aria-label="Lists" className="grid grid-cols-3 gap-1 rounded-xl bg-card p-1 ring-1 ring-line">
           {TABS.map((t) => (
             <button
               key={t.id}
               type="button"
               role="tab"
               aria-selected={tab === t.id}
-              className={`min-h-9 rounded-lg text-sm font-medium ${tab === t.id ? 'bg-card text-fg' : 'text-muted'}`}
+              className={`min-h-9 rounded-lg text-sm font-medium ${tab === t.id ? 'bg-raised text-fg' : 'text-muted'}`}
               onClick={() => setTab(t.id)}
             >
               {t.label}

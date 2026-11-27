@@ -322,3 +322,16 @@ test('a finished plates entry has no unit switch', async () => {
   expect(within(region).getByRole('button', { name: 'Swap' })).toBeInTheDocument();
   expect(within(region).queryByRole('radiogroup', { name: 'Unit' })).toBeNull();
 });
+
+test("tapping an exercise's name opens its history and Back returns to the workout with nothing lost", async () => {
+  const w = await start();
+  renderAt(`#/workout/${w.id}`);
+  const b = within(await exerciseRegion('Bench'));
+  await user.type(b.getByLabelText('Set 1 reps'), '9');
+  await user.click(b.getByRole('button', { name: 'Bench history' }));
+  expect(await screen.findByText('No sessions yet.')).toBeInTheDocument();
+  expect((await stored(w.id)).entries[0]?.sets[0]?.reps).toBe(9);
+  await user.click(screen.getByRole('link', { name: 'Back' }));
+  const again = within(await exerciseRegion('Bench'));
+  expect(again.getByLabelText('Set 1 reps')).toHaveValue('9');
+});

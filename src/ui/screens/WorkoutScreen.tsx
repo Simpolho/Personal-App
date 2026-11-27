@@ -12,6 +12,7 @@ import { Field, Screen } from '../components/ui';
 import { btnDanger, btnDone, btnSecondary, card } from '../styles';
 import { DateBox } from '../components/DateBox';
 import { UnitSwitch } from '../components/UnitSwitch';
+import { historyPath } from '../exerciseLinks';
 
 /** Moves an ISO time by whole local days, keeping the time of day. */
 function shiftDays(iso: string, days: number): string {
@@ -204,12 +205,14 @@ function EntryCard({
   last,
   menu,
   onChange,
+  onHistory,
 }: {
   entry: WorkoutEntry;
   exercise: Exercise | undefined;
   last: WorkoutSet[] | null | undefined;
   menu: EntryMenu;
   onChange: (entry: WorkoutEntry) => void;
+  onHistory: () => void;
 }) {
   const name = exercise?.name ?? 'Exercise';
   const labels = entry.sets.map((s, i) => {
@@ -233,7 +236,15 @@ function EntryCard({
     <section aria-label={name} className={`${card} space-y-2 p-3`}>
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
-          <h2 className="font-semibold">{name}</h2>
+          <h2 className="font-semibold">
+            {exercise ? (
+              <button type="button" aria-label={`${name} history`} className="-my-2 min-h-11 text-left font-semibold" onClick={onHistory}>
+                {name}
+              </button>
+            ) : (
+              name
+            )}
+          </h2>
           {entry.target && <p className="text-sm text-muted">{formatTarget(entry.target)}</p>}
           {last && last.length > 0 && <p className="text-sm text-muted">{`Last: ${formatLast(last)}`}</p>}
         </div>
@@ -502,6 +513,7 @@ export function WorkoutScreen() {
             },
           }}
           onChange={(next) => update((w) => ({ ...w, entries: w.entries.map((e) => (e.id === next.id ? next : e)) }))}
+          onHistory={() => void go(historyPath(entry.exerciseId, `/workout/${workout.id}`))}
         />
       ))}
       <button type="button" className={`${btnSecondary} w-full`} onClick={() => void go(`/workout/${workout.id}/add`)}>

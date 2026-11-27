@@ -4,7 +4,7 @@ import { listExercises, listRoutines } from '../../db/workouts';
 import { Screen } from '../components/ui';
 import { btnSecondary, card, row, sectionTitle } from '../styles';
 
-/** Routines and exercises, each leading to its editor. */
+/** Routines, each leading to its editor, and exercises, each leading to its history. */
 export function RoutinesScreen() {
   const routines = useLiveQuery(() => listRoutines(), []);
   const exercises = useLiveQuery(() => listExercises(), []);
@@ -33,7 +33,7 @@ export function RoutinesScreen() {
           <ul className={`${card} divide-y divide-line overflow-hidden`}>
             {exercises.map((e) => (
               <li key={e.id}>
-                <Link to={`/exercises/${e.id}`} aria-label={e.name} className={row}>
+                <Link to={`/exercises/${e.id}/history`} aria-label={e.name} className={row}>
                   <span>{e.name}</span>
                   <span className="text-sm text-muted">{e.muscle}</span>
                 </Link>

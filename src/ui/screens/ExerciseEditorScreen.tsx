@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { db } from '../../db/db';
 import { isLive } from '../../db/records';
 import type { Exercise, ExerciseUnit, MuscleGroup } from '../../db/types';
@@ -9,11 +9,15 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Field, Screen } from '../components/ui';
 import { WEIGHT_UNIT_NAMES } from '../labels';
 import { btnDanger, btnPrimary, card, errorText, input, select } from '../styles';
+import { historyPath } from '../exerciseLinks';
 
 const BACK = '/workouts/routines';
 
 function ExerciseForm({ existing }: { existing: Exercise | null }) {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  // An existing exercise was opened from its history, so Back and Save return there.
+  const back = existing ? historyPath(existing.id, params.get('from')) : BACK;
   const [name, setName] = useState(existing?.name ?? '');
   const [muscle, setMuscle] = useState<MuscleGroup | ''>(existing?.muscle ?? '');
   const [unit, setUnit] = useState<ExerciseUnit>(existing?.unit ?? 'kg');
@@ -33,7 +37,7 @@ function ExerciseForm({ existing }: { existing: Exercise | null }) {
     // A plate weight from when plates were a unit is kept, so old plate sets still count.
     const plateWeight = existing?.plateWeight;
     await saveExercise({ name: trimmed, muscle, unit, ...(plateWeight ? { plateWeight } : {}), eachSide, note: note.trim() }, existing?.id);
-    navigate(BACK);
+    navigate(back);
   }
 
   async function remove() {
@@ -45,7 +49,7 @@ function ExerciseForm({ existing }: { existing: Exercise | null }) {
   }
 
   return (
-    <Screen title={existing ? existing.name : 'New exercise'} back={BACK}>
+    <Screen title={existing ? existing.name : 'New exercise'} back={back}>
       <section className={`${card} space-y-3 p-4`}>
         <Field label="Name">
           <input className={input} value={name} onChange={(e) => setName(e.target.value)} />

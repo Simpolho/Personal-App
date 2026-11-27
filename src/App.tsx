@@ -25,6 +25,7 @@ import { WorkoutsScreen } from './ui/screens/WorkoutsScreen';
 import { RoutinesScreen } from './ui/screens/RoutinesScreen';
 import { RoutineEditorScreen } from './ui/screens/RoutineEditorScreen';
 import { ExerciseEditorScreen } from './ui/screens/ExerciseEditorScreen';
+import { ExerciseHistoryScreen } from './ui/screens/ExerciseHistoryScreen';
 
 function ToHome() {
   return <Navigate to="/" replace />;
@@ -58,6 +59,7 @@ function Screens() {
         <Route path="/workouts" element={<WorkoutsScreen />} />
         <Route path="/workouts/routines" element={<RoutinesScreen />} />
         <Route path="/routines/:id" element={<RoutineEditorScreen />} />
+        <Route path="/exercises/:id/history" element={<ExerciseHistoryScreen />} />
         <Route path="/exercises/:id" element={<ExerciseEditorScreen />} />
         <Route path="*" element={<ToHome />} />
       </Routes>

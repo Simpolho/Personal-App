@@ -83,3 +83,9 @@ test('a history set reads like the workout screen, with the RPE after it', () =>
   expect(formatHistorySet(set(77.5, 7))).toBe('77.5×7');
   expect(formatHistorySet(set(undefined, 12))).toBe('–×12');
 });
+
+test('when the best is matched later, the Best line keeps the first time it was done', () => {
+  const first = { ...session('kg', 80, 6), date: '2026-11-17' };
+  const again = { ...session('kg', 80, 6), date: '2026-11-26' };
+  expect(bestEver([again, first], 'kg')!.session).toBe(first); // sessions come newest first
+});

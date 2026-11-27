@@ -72,7 +72,8 @@ export function bestEver(sessions: HistorySession[], unit: ExerciseUnit): { sess
   for (const session of sessions) {
     if (session.bestMax === null) continue;
     const kg = toKg(session.bestMax, session.unit);
-    if (!best || kg > best.kg) best = { session, kg };
+    // Sessions come newest first: on a tie the older one wins, the first time that best was done.
+    if (!best || kg >= best.kg) best = { session, kg };
   }
   if (!best) return null;
   return { session: best.session, max: unit === 'lb' ? best.kg / KG_PER_LB : best.kg };

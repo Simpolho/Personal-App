@@ -173,35 +173,39 @@ type UnitData = { exercises: Exercise[]; routines: Routine[]; workouts: Workout[
  * The one-time move to kg and lb only. Exercises in plates or bodyweight become kg; start weights
  * that were plate counts are cleared; bodyweight entries become kg (an empty weight meant +0, so 0).
  * Old plate entries stay as logged: "14 plates" can't become kg without a plate weight.
- * Returns only the records it changed, each stamped `now`. Units are read as plain strings because
- * old records hold values the current types don't allow.
+ * Returns only the records it changed, each stamped `now` (or, with `now` null, keeping its own
+ * `updatedAt`, for records from a backup file). Units are read as plain strings because old records
+ * hold values the current types don't allow.
  */
-export function cleanUpUnits(data: UnitData, now: string): UnitData {
+export function cleanUpUnits(data: UnitData, now: string | null): UnitData {
+  const stamp = <T extends { updatedAt: string }>(r: T): T => (now === null ? r : { ...r, updatedAt: now });
   const unitOf = (r: { unit: string }) => r.unit;
   const fromPlates = new Set(data.exercises.filter((e) => unitOf(e) === 'plates').map((e) => e.id));
   const exercises = data.exercises
     .filter((e) => unitOf(e) === 'plates' || unitOf(e) === 'bodyweight')
-    .map((e) => ({ ...e, unit: 'kg' as const, updatedAt: now }));
+    .map((e) => stamp({ ...e, unit: 'kg' as const }));
   const routines = data.routines
     .filter((r) => r.items.some((i) => fromPlates.has(i.exerciseId) && i.startWeight !== undefined))
-    .map((r) => ({
-      ...r,
-      items: r.items.map((i) => {
-        if (!fromPlates.has(i.exerciseId)) return i;
-        const { startWeight: _plates, ...rest } = i;
-        return rest;
+    .map((r) =>
+      stamp({
+        ...r,
+        items: r.items.map((i) => {
+          if (!fromPlates.has(i.exerciseId)) return i;
+          const { startWeight: _plates, ...rest } = i;
+          return rest;
+        }),
       }),
-      updatedAt: now,
-    }));
+    );
   const isBodyweight = (e: WorkoutEntry) => unitOf(e) === 'bodyweight';
   const workouts = data.workouts
     .filter((w) => w.entries.some(isBodyweight))
-    .map((w) => ({
-      ...w,
-      entries: w.entries.map((e) =>
-        isBodyweight(e) ? { ...e, unit: 'kg' as const, sets: e.sets.map((s) => ({ ...s, weight: s.weight ?? 0 })) } : e,
-      ),
-      updatedAt: now,
-    }));
+    .map((w) =>
+      stamp({
+        ...w,
+        entries: w.entries.map((e) =>
+          isBodyweight(e) ? { ...e, unit: 'kg' as const, sets: e.sets.map((s) => ({ ...s, weight: s.weight ?? 0 })) } : e,
+        ),
+      }),
+    );
   return { exercises, routines, workouts };
 }

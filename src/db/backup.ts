@@ -163,8 +163,30 @@ function readRecords(file: unknown): Record<RecordTable, BaseRecord[]> {
  * a newer `updatedAt` replaces the app's copy, anything else is left alone. The whole file is
  * checked first and written in one transaction, so a bad file changes nothing.
  */
+/**
+ * An older backup can hold plates and bodyweight. Its records are moved to kg the way the upgrade
+ * did, before they are merged, judged on the backup's own exercises. They keep their own
+ * `updatedAt`, so the usual "newer one wins" merge still decides between them and the phone's.
+ */
+function cleanBackupUnits(records: Record<RecordTable, BaseRecord[]>): Record<RecordTable, BaseRecord[]> {
+  const changed = cleanUpUnits(
+    { exercises: records.exercises as Exercise[], routines: records.routines as Routine[], workouts: records.workouts as Workout[] },
+    null,
+  );
+  const swap = (list: BaseRecord[], replacements: BaseRecord[]) => {
+    const byId = new Map(replacements.map((r) => [r.id, r]));
+    return list.map((r) => byId.get(r.id) ?? r);
+  };
+  return {
+    ...records,
+    exercises: swap(records.exercises, changed.exercises),
+    routines: swap(records.routines, changed.routines),
+    workouts: swap(records.workouts, changed.workouts),
+  };
+}
+
 export async function importAll(file: unknown): Promise<{ added: number; updated: number; skipped: number }> {
-  const records = readRecords(file);
+  const records = cleanBackupUnits(readRecords(file));
   const result = { added: 0, updated: 0, skipped: 0 };
   const tables = RECORD_TABLES.map((name) => db.table<BaseRecord, string>(name));
   await db.transaction('rw', tables, async () => {
@@ -183,19 +205,6 @@ export async function importAll(file: unknown): Promise<{ added: number; updated
         }
       }
     }
-    // An older backup can bring plates or bodyweight back; move them to kg like the upgrade did.
-    const live = <T extends BaseRecord>(rows: T[]) => rows.filter((r) => !r.deletedAt);
-    const changed = cleanUpUnits(
-      {
-        exercises: live(await db.exercises.toArray()) as Exercise[],
-        routines: live(await db.routines.toArray()) as Routine[],
-        workouts: live(await db.workouts.toArray()) as Workout[],
-      },
-      nowIso(),
-    );
-    await db.exercises.bulkPut(changed.exercises);
-    await db.routines.bulkPut(changed.routines);
-    await db.workouts.bulkPut(changed.workouts);
   });
   return result;
 }

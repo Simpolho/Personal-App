@@ -189,7 +189,36 @@ test('an old backup with plates and bodyweight imports cleaned', async () => {
 });
 test('re-importing an old backup does not bring plates back', async () => {
   await importAll(oldUnitsBackup());
-  await importAll(oldUnitsBackup());
+  expect(await importAll(oldUnitsBackup())).toMatchObject({ added: 0, updated: 0 });
   expect((await db.exercises.get('legext'))!.unit).toBe('kg');
   expect((await db.workouts.get('w1'))!.entries[0]!.unit).toBe('kg');
+});
+test('restoring two old backups in turn cannot bring back a plate-count start weight', async () => {
+  const october = oldUnitsBackup();
+  const NOV = '2026-11-10T00:00:00.000Z';
+  const november = {
+    ...oldUnitsBackup(),
+    records: {
+      ...oldUnitsBackup().records,
+      routines: [
+        {
+          id: 'lower-a',
+          createdAt: NOV,
+          updatedAt: NOV,
+          name: 'Lower A',
+          weekdays: [1],
+          items: [{ exerciseId: 'legext', sets: 3, repsMin: 10, repsMax: 15, rpeTarget: '', startWeight: 14 }],
+        },
+      ],
+    },
+  };
+  await importAll(october);
+  await importAll(november);
+  expect((await db.routines.get('lower-a'))!.items[0]!.startWeight).toBeUndefined();
+});
+test('an old backup is cleaned up even in records that were deleted', async () => {
+  const file = oldUnitsBackup();
+  const gone = { id: 'dips', createdAt: OLD, updatedAt: OLD, deletedAt: OLD, name: 'Dips', muscle: 'Chest', unit: 'bodyweight', eachSide: false, note: '' };
+  await importAll({ ...file, records: { ...file.records, exercises: [...file.records.exercises, gone] } });
+  expect((await db.exercises.get('dips'))!.unit).toBe('kg');
 });

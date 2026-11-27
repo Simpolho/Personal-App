@@ -105,7 +105,7 @@ The layout he approved (example numbers):
   - Workout entries: `'kg' | 'lb' | 'plates'`. `'plates'` remains only for old entries.
   - `'bodyweight'` disappears after the clean-up.
   - Backups that still contain plates or bodyweight anywhere import and are cleaned up. They are not refused.
-- **One clean-up function** (Claude's call), run by the database upgrade and after every import. It:
+- **One clean-up function** (Claude's call), run by the database upgrade, and on each imported backup's own records before they're merged (keeping their timestamps; changed after the final review so restoring two old backups in turn can't bring back a plate start weight). It:
   - sets plates and bodyweight exercises to kg
   - clears start weights on routine items whose exercise was switched from plates
   - turns bodyweight entries into kg, with an empty weight becoming 0

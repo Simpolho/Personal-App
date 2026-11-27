@@ -3,14 +3,15 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { db } from '../../db/db';
 import { isLive } from '../../db/records';
-import type { Exercise, Workout, WorkoutEntry, WorkoutSet } from '../../db/types';
-import { deleteWorkout, lastSetsFor, saveWorkout, setExerciseNote } from '../../db/workouts';
+import type { Exercise, ExerciseUnit, Workout, WorkoutEntry, WorkoutSet } from '../../db/types';
+import { deleteWorkout, lastSetsFor, saveWorkout, setExerciseNote, setExerciseUnit } from '../../db/workouts';
 import { nowIso } from '../../domain/dates';
 import { finishedVersion, formatElapsed, formatLast, formatTarget, parseLift, parseReps, RPE_VALUES } from '../../domain/workouts';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Field, Screen } from '../components/ui';
 import { btnDanger, btnDone, btnSecondary, card } from '../styles';
 import { DateBox } from '../components/DateBox';
+import { UnitSwitch } from '../components/UnitSwitch';
 
 /** Moves an ISO time by whole local days, keeping the time of day. */
 function shiftDays(iso: string, days: number): string {
@@ -184,7 +185,18 @@ function SetRow({
   );
 }
 
-type EntryMenu = { open: boolean; first: boolean; last: boolean; onToggle: () => void; onSwap: () => void; onMove: (by: -1 | 1) => void; onRemove: () => void };
+type EntryMenu = {
+  open: boolean;
+  first: boolean;
+  last: boolean;
+  /** False on a finished workout's old plates entry: switching would relabel "14 plates" as kg. */
+  canSwitchUnit: boolean;
+  onToggle: () => void;
+  onSwap: () => void;
+  onMove: (by: -1 | 1) => void;
+  onRemove: () => void;
+  onUnit: (unit: ExerciseUnit) => void;
+};
 
 function EntryCard({
   entry,
@@ -235,6 +247,7 @@ function EntryCard({
           ⋯
         </button>
       </div>
+      {menu.open && menu.canSwitchUnit && <UnitSwitch unit={entry.unit} onChange={menu.onUnit} />}
       {menu.open && (
         <div className="grid grid-cols-2 gap-2">
           <button type="button" className={btnSecondary} onClick={menu.onSwap}>
@@ -477,10 +490,16 @@ export function WorkoutScreen() {
             open: menuFor === entry.id,
             first: i === 0,
             last: i === workout.entries.length - 1,
+            canSwitchUnit: inProgress || entry.unit !== 'plates',
             onToggle: () => setMenuFor(menuFor === entry.id ? null : entry.id),
             onSwap: () => void go(`/workout/${workout.id}/swap/${entry.id}`),
             onMove: (by) => move(entry.id, by),
             onRemove: () => setRemoving(entry),
+            onUnit: (unit) => {
+              update((w) => ({ ...w, entries: w.entries.map((e) => (e.id === entry.id ? { ...e, unit } : e)) }));
+              // During a workout the choice is for next time too; on a finished one it's a correction.
+              if (inProgress) void setExerciseUnit(entry.exerciseId, unit);
+            },
           }}
           onChange={(next) => update((w) => ({ ...w, entries: w.entries.map((e) => (e.id === next.id ? next : e)) }))}
         />

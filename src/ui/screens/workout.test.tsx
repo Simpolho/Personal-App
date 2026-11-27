@@ -286,3 +286,39 @@ test("a finished workout's date is shown by the app itself, centred", async () =
   renderAt(`#/workout/${done!.id}`);
   expect(await screen.findByText('Mon 16 Nov 2026')).toHaveClass('justify-center');
 });
+
+test('kg / lb can be switched mid-workout, and the exercise remembers it', async () => {
+  const w = await start();
+  renderAt(`#/workout/${w.id}`);
+  const region = await exerciseRegion('Bench');
+  await user.click(within(region).getByRole('button', { name: 'Options for Bench' }));
+  const units = within(region).getByRole('radiogroup', { name: 'Unit' });
+  expect(within(units).getByRole('radio', { name: 'kg' })).toHaveAttribute('aria-checked', 'true');
+  await user.click(within(units).getByRole('radio', { name: 'lb' }));
+  await waitFor(async () => expect((await stored(w.id)).entries[0]!.unit).toBe('lb'));
+  expect((await stored(w.id)).entries[0]!.sets.map((s) => s.weight)).toEqual([22.5, 22.5, 22.5]);
+  expect(within(region).getAllByText('lb').length).toBeGreaterThanOrEqual(3);
+  await waitFor(async () => expect((await db.exercises.get(bench.id))!.unit).toBe('lb'));
+});
+
+test('on a finished workout the switch corrects only that workout', async () => {
+  await history();
+  const done = (await db.workouts.toArray())[0]!;
+  renderAt(`#/workout/${done.id}`);
+  const region = await exerciseRegion('Bench');
+  await user.click(within(region).getByRole('button', { name: 'Options for Bench' }));
+  await user.click(within(within(region).getByRole('radiogroup', { name: 'Unit' })).getByRole('radio', { name: 'lb' }));
+  await waitFor(async () => expect((await stored(done.id)).entries[0]!.unit).toBe('lb'));
+  expect((await db.exercises.get(bench.id))!.unit).toBe('kg');
+});
+
+test('a finished plates entry has no unit switch', async () => {
+  await history();
+  const done = (await db.workouts.toArray())[0]!;
+  await db.workouts.put({ ...done, entries: done.entries.map((e, i) => (i === 0 ? { ...e, unit: 'plates' as const } : e)) });
+  renderAt(`#/workout/${done.id}`);
+  const region = await exerciseRegion('Bench');
+  await user.click(within(region).getByRole('button', { name: 'Options for Bench' }));
+  expect(within(region).getByRole('button', { name: 'Swap' })).toBeInTheDocument();
+  expect(within(region).queryByRole('radiogroup', { name: 'Unit' })).toBeNull();
+});

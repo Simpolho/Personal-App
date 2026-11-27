@@ -1,6 +1,7 @@
 import { expect, test } from 'vitest';
-import type { Exercise, MuscleGroup, WeightUnit, Workout, WorkoutEntry, WorkoutSet } from '../db/types';
+import type { EntryUnit, Exercise, ExerciseUnit, MuscleGroup, Routine, Workout, WorkoutEntry, WorkoutSet } from '../db/types';
 import {
+  cleanUpUnits,
   formatElapsed,
   formatLast,
   formatTarget,
@@ -24,7 +25,7 @@ const set = (weight: number | undefined, reps: number | undefined, extra: Partia
   reps,
   ...extra,
 });
-const exercise = (id: string, muscle: MuscleGroup, unit: WeightUnit, extra: Partial<Exercise> = {}): Exercise => ({
+const exercise = (id: string, muscle: MuscleGroup, unit: ExerciseUnit, extra: Partial<Exercise> = {}): Exercise => ({
   id,
   name: id,
   muscle,
@@ -35,7 +36,7 @@ const exercise = (id: string, muscle: MuscleGroup, unit: WeightUnit, extra: Part
   updatedAt: '',
   ...extra,
 });
-const entry = (exerciseId: string, unit: WeightUnit, sets: WorkoutSet[]): WorkoutEntry => ({ id: `e-${exerciseId}`, exerciseId, unit, sets });
+const entry = (exerciseId: string, unit: EntryUnit, sets: WorkoutSet[]): WorkoutEntry => ({ id: `e-${exerciseId}`, exerciseId, unit, sets });
 const workout = (entries: WorkoutEntry[]): Workout => ({
   id: 'w1',
   date: '2026-11-23',
@@ -63,23 +64,21 @@ test('weights and reps are parsed from what is typed', () => {
 });
 
 test('a set weight in kg, from each unit', () => {
-  expect(setKg(60, 'kg', {}, null)).toBe(60);
-  expect(setKg(10, 'lb', {}, null)).toBeCloseTo(4.5359237, 7);
-  expect(setKg(14, 'plates', {}, null)).toBeNull();
-  expect(setKg(14, 'plates', { plateWeight: { value: 5, unit: 'kg' } }, null)).toBe(70);
-  expect(setKg(14, 'plates', { plateWeight: { value: 10, unit: 'lb' } }, null)).toBeCloseTo(63.5029318, 6);
-  expect(setKg(0, 'bodyweight', {}, 78)).toBe(78);
-  expect(setKg(10, 'bodyweight', {}, 78)).toBe(88);
-  expect(setKg(0, 'bodyweight', {}, null)).toBeNull();
+  expect(setKg(60, 'kg', {})).toBe(60);
+  expect(setKg(10, 'lb', {})).toBeCloseTo(4.5359237, 7);
+  expect(setKg(14, 'plates', {})).toBeNull();
+  expect(setKg(14, 'plates', { plateWeight: { value: 5, unit: 'kg' } })).toBe(70);
+  expect(setKg(14, 'plates', { plateWeight: { value: 10, unit: 'lb' } })).toBeCloseTo(63.5029318, 6);
+  expect(setKg(undefined, 'kg', {})).toBe(0);
 });
 
 const exercises = new Map(
   [
     exercise('Bench', 'Chest', 'kg'),
     exercise('Raise', 'Shoulders', 'lb'),
-    exercise('LegExt', 'Quads', 'plates'),
+    exercise('LegExt', 'Quads', 'kg'), // its old sets were logged in plates
     exercise('SLPress', 'Quads', 'kg', { eachSide: true }),
-    exercise('BackExt', 'Hamstrings', 'bodyweight'),
+    exercise('BackExt', 'Hamstrings', 'kg'),
   ].map((e) => [e.id, e]),
 );
 const fullWorkout = () =>
@@ -94,36 +93,30 @@ const fullWorkout = () =>
     entry('Raise', 'lb', [set(10, 12)]),
     entry('LegExt', 'plates', [set(14, 12)]),
     entry('SLPress', 'kg', [set(25, 10)]),
-    entry('BackExt', 'bodyweight', [set(0, 12)]),
+    entry('BackExt', 'kg', [set(0, 12)]), // 0 kg held: counts as a set, adds no volume
   ]);
 
 test('the recap adds up working sets and volume per muscle group, in the fixed order', () => {
-  const recap = recapOf(fullWorkout(), exercises, 78);
+  const recap = recapOf(fullWorkout(), exercises);
   expect(recap.rows.map((r) => r.muscle)).toEqual(['Chest', 'Shoulders', 'Quads', 'Hamstrings']);
   const row = (m: MuscleGroup) => recap.rows.find((r) => r.muscle === m)!;
   expect(row('Chest')).toMatchObject({ sets: 2, volume: 960 });
   expect(row('Shoulders').volume).toBeCloseTo(54.43, 2);
   expect(row('Quads')).toMatchObject({ sets: 2, volume: 500 }); // leg extension counts as a set, not volume
-  expect(row('Hamstrings')).toMatchObject({ sets: 1, volume: 936 });
+  expect(row('Hamstrings')).toMatchObject({ sets: 1, volume: 0 });
   expect(recap.leftOut).toEqual([{ name: 'LegExt', reason: 'plates' }]);
-});
-
-test('bodyweight with no weight ever logged is left out of the volume, and named', () => {
-  const recap = recapOf(fullWorkout(), exercises, null);
-  expect(recap.rows.find((r) => r.muscle === 'Hamstrings')).toMatchObject({ sets: 1, volume: 0 });
-  expect(recap.leftOut).toContainEqual({ name: 'BackExt', reason: 'bodyweight' });
 });
 
 test('settings changed later: a plate weight counts past sets; the unit a set was logged in wins', () => {
   const later = new Map(exercises);
-  later.set('LegExt', exercise('LegExt', 'Quads', 'plates', { plateWeight: { value: 5, unit: 'kg' } }));
-  const recap = recapOf(fullWorkout(), later, 78);
+  later.set('LegExt', exercise('LegExt', 'Quads', 'kg', { plateWeight: { value: 5, unit: 'kg' } }));
+  const recap = recapOf(fullWorkout(), later);
   expect(recap.rows.find((r) => r.muscle === 'Quads')?.volume).toBe(500 + 840);
   expect(recap.leftOut).toEqual([]);
 
   const nowKg = new Map(later);
   nowKg.set('LegExt', exercise('LegExt', 'Quads', 'kg', { plateWeight: { value: 5, unit: 'kg' } }));
-  expect(recapOf(fullWorkout(), nowKg, 78).rows.find((r) => r.muscle === 'Quads')?.volume).toBe(500 + 840);
+  expect(recapOf(fullWorkout(), nowKg).rows.find((r) => r.muscle === 'Quads')?.volume).toBe(500 + 840);
 });
 
 test('changes against the previous recap', () => {
@@ -169,4 +162,51 @@ test("today's routines come from their weekdays", () => {
   const routine = (name: string, weekdays: number[]) => ({ id: name, name, weekdays, items: [], createdAt: '', updatedAt: '' });
   expect(routinesForDate([routine('Upper A', [1]), routine('Upper B', [4])], '2026-11-23').map((r) => r.name)).toEqual(['Upper A']);
   expect(MUSCLE_GROUPS).toEqual(['Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Forearms', 'Quads', 'Hamstrings', 'Glutes', 'Calves', 'Abs']);
+});
+
+const NOW = '2026-11-27T10:00:00.000Z';
+/** A record as an older version of the app stored it, with a unit the types no longer allow. */
+const legacy = <T>(record: T, fields: Record<string, unknown>) => ({ ...record, ...fields }) as T;
+const routine = (items: Routine['items']): Routine => ({ id: 'r1', name: 'Lower A', weekdays: [1], items, createdAt: '', updatedAt: '' });
+
+test('cleanUpUnits switches plates and bodyweight exercises to kg and clears plate start weights', () => {
+  const legExt = legacy(exercise('LegExt', 'Quads', 'kg'), { unit: 'plates' });
+  const backExt = legacy(exercise('BackExt', 'Hamstrings', 'kg'), { unit: 'bodyweight' });
+  const bench = exercise('Bench', 'Chest', 'kg');
+  const item = (exerciseId: string, startWeight: number) => ({ exerciseId, sets: 3, repsMin: 8, repsMax: 12, rpeTarget: '', startWeight });
+  const result = cleanUpUnits(
+    { exercises: [legExt, backExt, bench], routines: [routine([item('LegExt', 14), item('BackExt', 0), item('Bench', 60)])], workouts: [] },
+    NOW,
+  );
+  expect(result.exercises.map((e) => [e.id, e.unit, e.updatedAt])).toEqual([
+    ['LegExt', 'kg', NOW],
+    ['BackExt', 'kg', NOW],
+  ]);
+  expect(result.routines).toHaveLength(1);
+  expect(result.routines[0]!.updatedAt).toBe(NOW);
+  expect(result.routines[0]!.items.map((i) => i.startWeight)).toEqual([undefined, 0, 60]);
+  expect('startWeight' in result.routines[0]!.items[0]!).toBe(false);
+});
+
+test('cleanUpUnits turns bodyweight entries into kg, empty weight into 0, and leaves plates entries alone', () => {
+  const bw = legacy(entry('BackExt', 'kg', [set(undefined, 12), set(10, 10)]), { unit: 'bodyweight' });
+  const plates = entry('LegExt', 'plates', [set(14, 12)]);
+  const mixed = workout([bw, plates]);
+  const kgOnly = { ...workout([entry('Bench', 'kg', [set(60, 8)])]), id: 'w2' };
+  const result = cleanUpUnits({ exercises: [], routines: [], workouts: [mixed, kgOnly] }, NOW);
+  expect(result.workouts.map((w) => w.id)).toEqual(['w1']);
+  const [cleanBw, cleanPlates] = result.workouts[0]!.entries;
+  expect(cleanBw!.unit).toBe('kg');
+  expect(cleanBw!.sets.map((s) => s.weight)).toEqual([0, 10]);
+  expect(cleanPlates).toEqual(plates);
+  expect(result.workouts[0]!.updatedAt).toBe(NOW);
+});
+
+test('cleanUpUnits on clean data changes nothing', () => {
+  const data = {
+    exercises: [exercise('Bench', 'Chest', 'kg'), exercise('Raise', 'Shoulders', 'lb')],
+    routines: [routine([{ exerciseId: 'Bench', sets: 3, repsMin: 8, repsMax: 12, rpeTarget: '', startWeight: 60 }])],
+    workouts: [workout([entry('Bench', 'kg', [set(60, 8)]), entry('LegExt', 'plates', [set(14, 12)])])],
+  };
+  expect(cleanUpUnits(data, NOW)).toEqual({ exercises: [], routines: [], workouts: [] });
 });

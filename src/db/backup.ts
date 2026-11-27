@@ -1,7 +1,10 @@
 import { nowIso } from '../domain/dates';
-import { MUSCLE_GROUPS, WEIGHT_UNITS } from '../domain/workouts';
+import { cleanUpUnits, MUSCLE_GROUPS } from '../domain/workouts';
 import { db } from './db';
-import type { BaseRecord, Settings } from './types';
+import type { BaseRecord, Exercise, Routine, Settings, Workout } from './types';
+
+/** Units a backup may hold: plates and bodyweight come from older versions and are cleaned up on import. */
+const BACKUP_UNITS: readonly unknown[] = ['kg', 'lb', 'plates', 'bodyweight'];
 
 export const EXPORT_FORMAT = 'fitness-app-export';
 export const EXPORT_VERSION = 1;
@@ -103,7 +106,7 @@ const SHAPES: Record<RecordTable, (r: Record<string, unknown>) => boolean> = {
   exercises: (r) =>
     isString(r.name) &&
     (MUSCLE_GROUPS as readonly unknown[]).includes(r.muscle) &&
-    (WEIGHT_UNITS as readonly unknown[]).includes(r.unit) &&
+    BACKUP_UNITS.includes(r.unit) &&
     typeof r.eachSide === 'boolean' &&
     isString(r.note) &&
     (r.plateWeight === undefined || (isObject(r.plateWeight) && isNumber(r.plateWeight.value) && (r.plateWeight.unit === 'kg' || r.plateWeight.unit === 'lb'))),
@@ -122,7 +125,7 @@ const SHAPES: Record<RecordTable, (r: Record<string, unknown>) => boolean> = {
       r.entries,
       (e) =>
         isString(e.exerciseId) &&
-        (WEIGHT_UNITS as readonly unknown[]).includes(e.unit) &&
+        BACKUP_UNITS.includes(e.unit) &&
         isListOf(e.sets, (s) => typeof s.done === 'boolean' && typeof s.warmup === 'boolean'),
     ),
 };
@@ -180,6 +183,19 @@ export async function importAll(file: unknown): Promise<{ added: number; updated
         }
       }
     }
+    // An older backup can bring plates or bodyweight back; move them to kg like the upgrade did.
+    const live = <T extends BaseRecord>(rows: T[]) => rows.filter((r) => !r.deletedAt);
+    const changed = cleanUpUnits(
+      {
+        exercises: live(await db.exercises.toArray()) as Exercise[],
+        routines: live(await db.routines.toArray()) as Routine[],
+        workouts: live(await db.workouts.toArray()) as Workout[],
+      },
+      nowIso(),
+    );
+    await db.exercises.bulkPut(changed.exercises);
+    await db.routines.bulkPut(changed.routines);
+    await db.workouts.bulkPut(changed.workouts);
   });
   return result;
 }

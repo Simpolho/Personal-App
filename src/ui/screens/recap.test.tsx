@@ -1,13 +1,12 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
-import { resetDb } from '../../db/db';
+import { db, resetDb } from '../../db/db';
 import type { Exercise, Routine, Workout } from '../../db/types';
 import { finishWorkout, newEntry, saveExercise, saveRoutine, saveWorkout, startWorkout } from '../../db/workouts';
 import { renderAt, user } from '../../test/render';
 
 let bench: Exercise;
 let legExt: Exercise;
-let backExt: Exercise;
 let lat: Exercise;
 let upperA: Routine;
 
@@ -15,8 +14,7 @@ beforeEach(async () => {
   await resetDb();
   vi.setSystemTime(new Date('2026-11-01T10:00:00Z'));
   bench = await saveExercise({ name: 'Bench', muscle: 'Chest', unit: 'kg', eachSide: false, note: '' });
-  legExt = await saveExercise({ name: 'Leg extension', muscle: 'Quads', unit: 'plates', eachSide: false, note: '' });
-  backExt = await saveExercise({ name: 'Back extension', muscle: 'Hamstrings', unit: 'bodyweight', eachSide: false, note: '' });
+  legExt = await saveExercise({ name: 'Leg extension', muscle: 'Quads', unit: 'kg', eachSide: false, note: '' });
   lat = await saveExercise({ name: 'Lat pulldown', muscle: 'Back', unit: 'kg', eachSide: false, note: '' });
   upperA = await saveRoutine({ name: 'Upper A', weekdays: [1], items: [{ exerciseId: bench.id, sets: 2, repsMin: 6, repsMax: 10, rpeTarget: '' }] });
 });
@@ -69,21 +67,17 @@ test('a change under 1 kg shows as =', async () => {
   expect(muscleRow('Chest').getByText('=')).toBeInTheDocument();
 });
 
-test('plates without a plate weight are named, and count once the plate weight is set', async () => {
-  const w = await done('2026-11-16', [[legExt, [[14, 12]]]]);
+test('old sets logged in plates are named, and count if the exercise has a plate weight', async () => {
+  const done16 = await done('2026-11-16', [[legExt, [[14, 12]]]]);
+  const w = { ...done16, entries: done16.entries.map((e) => ({ ...e, unit: 'plates' as const })) };
+  await db.workouts.put(w); // logged before plates were dropped
   renderAt(`#/workout/${w.id}/recap`);
-  expect(await screen.findByText("Leg extension isn't in the volume: set its plate weight.")).toBeInTheDocument();
+  expect(await screen.findByText("Leg extension isn't in the volume: logged in plates.")).toBeInTheDocument();
   expect(muscleRow('Quads').getByText('1 set')).toBeInTheDocument();
   expect(muscleRow('Quads').getByText('0 kg')).toBeInTheDocument();
   await saveExercise({ ...legExt, plateWeight: { value: 5, unit: 'kg' } }, legExt.id);
   await waitFor(() => expect(screen.queryByText(/Leg extension isn't in the volume/)).toBeNull());
   expect(muscleRow('Quads').getByText('840 kg')).toBeInTheDocument();
-});
-
-test('bodyweight with no weight logged asks for a weigh-in', async () => {
-  const w = await done('2026-11-16', [[backExt, [[0, 12]]]]);
-  renderAt(`#/workout/${w.id}/recap`);
-  expect(await screen.findByText("Back extension isn't in the volume: log your weight first.")).toBeInTheDocument();
 });
 
 test('a swapped exercise counts toward its own muscle group', async () => {

@@ -2,7 +2,6 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useNavigate, useParams } from 'react-router-dom';
 import { db } from '../../db/db';
 import { isLive } from '../../db/records';
-import { bodyKgOn } from '../../db/weight';
 import { previousRoutineWorkout } from '../../db/workouts';
 import { recapOf, withChanges, workoutMinutes } from '../../domain/workouts';
 import { Screen } from '../components/ui';
@@ -17,8 +16,7 @@ function change(value: number | undefined): string | null {
 }
 
 const LEFT_OUT = {
-  plates: "isn't in the volume: set its plate weight.",
-  bodyweight: "isn't in the volume: log your weight first.",
+  plates: "isn't in the volume: logged in plates.",
 } as const;
 
 /** After Finish, and from a past workout: sets and volume per muscle group against last time. */
@@ -31,8 +29,8 @@ export function RecapScreen() {
     // Exercises deleted since still name past workouts, so they're all read here.
     const exercises = new Map((await db.exercises.toArray()).map((e) => [e.id, e]));
     const previous = workout.routineId ? await previousRoutineWorkout(workout.routineId, workout.startedAt) : undefined;
-    const now = recapOf(workout, exercises, await bodyKgOn(workout.date));
-    const before = previous ? recapOf(previous, exercises, await bodyKgOn(previous.date)) : null;
+    const now = recapOf(workout, exercises);
+    const before = previous ? recapOf(previous, exercises) : null;
     return { workout, recap: withChanges(now, before), compared: previous !== undefined };
   }, [id]);
 

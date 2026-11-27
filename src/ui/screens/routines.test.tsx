@@ -74,28 +74,19 @@ test('exercises in a routine can be reordered; bad reps are refused', async () =
   await waitFor(async () => expect((await db.routines.get(routine.id))?.items.map((i) => i.exerciseId)).toEqual([raise.id, bench.id]));
 });
 
-test('a plate machine keeps its plate weight, even after switching to another unit', async () => {
-  const view = renderAt(`#/exercises/${bench.id}`);
+test('the editor offers only kg and lb, and saving keeps an existing plate weight', async () => {
+  await db.exercises.put({ ...bench, plateWeight: { value: 5, unit: 'kg' } }); // from when plates were a unit
+  renderAt(`#/exercises/${bench.id}`);
   expect(await screen.findByLabelText('Name')).toHaveValue('Bench');
+  const options = [...(screen.getByLabelText('Unit') as HTMLSelectElement).options].map((o) => o.value);
+  expect(options).toEqual(['kg', 'lb']);
   expect(screen.queryByLabelText('1 plate =')).toBeNull();
-  await user.selectOptions(screen.getByLabelText('Unit'), 'Plates');
-  await fill('1 plate =', '5');
-  await user.selectOptions(screen.getByLabelText('Plate unit'), 'kg');
   await user.click(screen.getByRole('checkbox', { name: 'Each side' }));
   await fill('Note', 'seat 4');
   await user.click(screen.getByRole('button', { name: 'Save' }));
   await waitFor(async () =>
-    expect(await db.exercises.get(bench.id)).toMatchObject({ unit: 'plates', plateWeight: { value: 5, unit: 'kg' }, eachSide: true, note: 'seat 4' }),
+    expect(await db.exercises.get(bench.id)).toMatchObject({ unit: 'kg', plateWeight: { value: 5, unit: 'kg' }, eachSide: true, note: 'seat 4' }),
   );
-  view.unmount();
-  renderAt(`#/exercises/${bench.id}`);
-  await screen.findByLabelText('1 plate =');
-  await user.selectOptions(screen.getByLabelText('Unit'), 'kg');
-  expect(screen.queryByLabelText('1 plate =')).toBeNull();
-  await user.click(screen.getByRole('button', { name: 'Save' }));
-  await waitFor(async () => expect((await db.exercises.get(bench.id))?.unit).toBe('kg'));
-  // Kept, so past sets logged in plates still count toward volume.
-  expect((await db.exercises.get(bench.id))?.plateWeight).toEqual({ value: 5, unit: 'kg' });
 });
 
 test('an exercise a routine uses is not deleted, and says where it is used', async () => {

@@ -2,7 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { db } from '../../db/db';
-import type { MuscleGroup, WeightUnit } from '../../db/types';
+import type { ExerciseUnit, MuscleGroup } from '../../db/types';
 import { listExercises, newEntry, saveExercise, saveWorkout } from '../../db/workouts';
 import { MUSCLE_GROUPS, WEIGHT_UNITS } from '../../domain/workouts';
 import { Field, Screen } from '../components/ui';
@@ -25,7 +25,7 @@ export function ExercisePickerScreen() {
   const [search, setSearch] = useState('');
   const [name, setName] = useState<string | null>(null);
   const [muscle, setMuscle] = useState<MuscleGroup | ''>('');
-  const [unit, setUnit] = useState<WeightUnit>('kg');
+  const [unit, setUnit] = useState<ExerciseUnit>('kg');
   const [error, setError] = useState<string | null>(null);
   const back = `/workout/${id}`;
 
@@ -114,7 +114,7 @@ export function ExercisePickerScreen() {
               </select>
             </Field>
             <Field label="Unit">
-              <select className={select} value={unit} onChange={(e) => setUnit(e.target.value as WeightUnit)}>
+              <select className={select} value={unit} onChange={(e) => setUnit(e.target.value as ExerciseUnit)}>
                 {WEIGHT_UNITS.map((u) => (
                   <option key={u} value={u}>
                     {WEIGHT_UNIT_NAMES[u]}

@@ -145,14 +145,16 @@ export type MuscleGroup =
   | 'Calves'
   | 'Abs';
 
-/** What an exercise's weight is measured in. For bodyweight, the weight typed is the added weight. */
-export type WeightUnit = 'kg' | 'lb' | 'plates' | 'bodyweight';
+/** What an exercise's weight is measured in. For a bodyweight exercise, the weight typed is the weight held (0 for none). */
+export type ExerciseUnit = 'kg' | 'lb';
+/** The unit a workout entry was logged in. `plates` only appears on entries logged before plates were dropped. */
+export type EntryUnit = ExerciseUnit | 'plates';
 
 export interface Exercise extends BaseRecord {
   name: string;
   muscle: MuscleGroup;
-  unit: WeightUnit;
-  /** Plates only: what one plate on this machine weighs. Without it, plate sets add no volume. */
+  unit: ExerciseUnit;
+  /** What one plate weighs, from when plates were a unit. Old plate sets count toward volume only with it. */
   plateWeight?: { value: number; unit: 'kg' | 'lb' };
   /** Weight and reps are for one side; volume counts both. */
   eachSide: boolean;
@@ -191,7 +193,7 @@ export interface WorkoutEntry {
   id: string;
   exerciseId: string;
   /** The unit the sets were logged in, kept even if the exercise's unit changes later. */
-  unit: WeightUnit;
+  unit: EntryUnit;
   target?: Omit<RoutineItem, 'exerciseId' | 'startWeight'>;
   sets: WorkoutSet[];
 }

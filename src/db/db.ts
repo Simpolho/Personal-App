@@ -1,4 +1,5 @@
 import Dexie, { type Table } from 'dexie';
+import { cleanUpUnits } from '../domain/workouts';
 import type {
   Day,
   Exercise,
@@ -62,6 +63,22 @@ export class AppDB extends Dexie {
       routines: 'id',
       workouts: 'id, date, startedAt, *exerciseIds',
     });
+    // Workouts part 3: kg and lb only. Plates and bodyweight exercises move to kg, once.
+    this.version(4)
+      .stores({})
+      .upgrade(async (tx) => {
+        const changed = cleanUpUnits(
+          {
+            exercises: await tx.table<Exercise, string>('exercises').toArray(),
+            routines: await tx.table<Routine, string>('routines').toArray(),
+            workouts: await tx.table<Workout, string>('workouts').toArray(),
+          },
+          new Date().toISOString(),
+        );
+        await tx.table('exercises').bulkPut(changed.exercises);
+        await tx.table('routines').bulkPut(changed.routines);
+        await tx.table('workouts').bulkPut(changed.workouts);
+      });
   }
 }
 

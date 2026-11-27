@@ -2,7 +2,7 @@ import { nowIso } from '../domain/dates';
 import { finishedVersion, isWorkingSet, prefillSets } from '../domain/workouts';
 import { db } from './db';
 import { isLive, newRecord, softDeleted, touched } from './records';
-import type { BaseRecord, Exercise, Routine, WeightUnit, Workout, WorkoutEntry, WorkoutSet } from './types';
+import type { BaseRecord, EntryUnit, Exercise, ExerciseUnit, Routine, Workout, WorkoutEntry, WorkoutSet } from './types';
 
 export type ExerciseFields = Omit<Exercise, keyof BaseRecord>;
 export type RoutineFields = Omit<Routine, keyof BaseRecord>;
@@ -38,6 +38,12 @@ export async function setExerciseNote(id: string, note: string): Promise<void> {
   if (existing && existing.note !== note) await db.exercises.put(touched({ ...existing, note }));
 }
 
+/** The unit chosen during a workout becomes the exercise's unit for next time. */
+export async function setExerciseUnit(id: string, unit: ExerciseUnit): Promise<void> {
+  const existing = await db.exercises.get(id);
+  if (existing && existing.unit !== unit) await db.exercises.put(touched({ ...existing, unit }));
+}
+
 export async function saveRoutine(fields: RoutineFields, id?: string): Promise<Routine> {
   const existing = id ? await db.routines.get(id) : undefined;
   const record: Routine = existing
@@ -67,7 +73,7 @@ export async function getActiveWorkout(): Promise<Workout | undefined> {
  * The working sets of `exerciseId` in the most recent finished workout that started before
  * `before` and has any, in whichever routine, logged in `unit` when given. Null when there is none.
  */
-export async function lastSetsFor(exerciseId: string, before: string, excludeId?: string, unit?: WeightUnit): Promise<WorkoutSet[] | null> {
+export async function lastSetsFor(exerciseId: string, before: string, excludeId?: string, unit?: EntryUnit): Promise<WorkoutSet[] | null> {
   const candidates = (await db.workouts.where('exerciseIds').equals(exerciseId).distinct().toArray())
     .filter((w) => finished(w) && w.startedAt < before && w.id !== excludeId)
     .sort((a, b) => b.startedAt.localeCompare(a.startedAt));

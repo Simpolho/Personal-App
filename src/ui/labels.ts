@@ -1,4 +1,4 @@
-import type { WeightUnit } from '../db/types';
+import type { ExerciseUnit } from '../db/types';
 import type { NutrientKey } from '../domain/nutrients';
 
 /** Form labels, with units. */
@@ -25,4 +25,4 @@ export const NUTRIENT_NAMES: Record<NutrientKey, string> = {
 };
 
 /** How each weight unit is named in the exercise forms. */
-export const WEIGHT_UNIT_NAMES: Record<WeightUnit, string> = { kg: 'kg', lb: 'lb', plates: 'Plates', bodyweight: 'Bodyweight' };
+export const WEIGHT_UNIT_NAMES: Record<ExerciseUnit, string> = { kg: 'kg', lb: 'lb' };

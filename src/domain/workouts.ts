@@ -1,4 +1,4 @@
-import type { Exercise, MuscleGroup, Routine, WeightUnit, Workout, WorkoutSet } from '../db/types';
+import type { EntryUnit, Exercise, ExerciseUnit, MuscleGroup, Routine, Workout, WorkoutEntry, WorkoutSet } from '../db/types';
 import { parseAmount } from './nutrients';
 
 export const MUSCLE_GROUPS: readonly MuscleGroup[] = [
@@ -14,10 +14,10 @@ export const MUSCLE_GROUPS: readonly MuscleGroup[] = [
   'Calves',
   'Abs',
 ];
-export const WEIGHT_UNITS: readonly WeightUnit[] = ['kg', 'lb', 'plates', 'bodyweight'];
+export const WEIGHT_UNITS: readonly ExerciseUnit[] = ['kg', 'lb'];
 export const RPE_VALUES = [6, 7, 8, 9, 10] as const;
 
-const KG_PER_LB = 0.45359237;
+export const KG_PER_LB = 0.45359237;
 
 /** A typed weight: 0 or more, at most 2 decimals, decimal comma accepted. Checked on the text, not the float. */
 export function parseLift(input: string): number | null {
@@ -34,16 +34,10 @@ export function parseReps(input: string): number | null {
 }
 
 /**
- * A set's weight in kg, or null when it can't be known: plates on a machine whose plate weight
- * isn't set, or bodyweight before any weight has been logged. `unit` is the unit the set was
- * logged in; the plate weight comes from the exercise as it is now.
+ * A set's weight in kg, or null when it can't be known: an old plate set whose exercise has no
+ * plate weight. `unit` is the unit the set was logged in; the plate weight comes from the exercise.
  */
-export function setKg(
-  weight: number | undefined,
-  unit: WeightUnit,
-  exercise: Pick<Exercise, 'plateWeight'>,
-  bodyKg: number | null,
-): number | null {
+export function setKg(weight: number | undefined, unit: EntryUnit, exercise: Pick<Exercise, 'plateWeight'>): number | null {
   const w = weight ?? 0;
   switch (unit) {
     case 'kg':
@@ -55,8 +49,6 @@ export function setKg(
       if (!plate) return null;
       return w * (plate.unit === 'lb' ? plate.value * KG_PER_LB : plate.value);
     }
-    case 'bodyweight':
-      return bodyKg === null ? null : bodyKg + w;
   }
 }
 
@@ -73,13 +65,13 @@ export function finishedVersion(w: Workout, finishedAt: string): Workout | null 
 export const isWorkingSet = (s: WorkoutSet): boolean => s.done && !s.warmup && s.reps !== undefined;
 
 export type RecapRow = { muscle: MuscleGroup; sets: number; volume: number; change?: number };
-export type Recap = { rows: RecapRow[]; leftOut: { name: string; reason: 'plates' | 'bodyweight' }[] };
+export type Recap = { rows: RecapRow[]; leftOut: { name: string; reason: 'plates' }[] };
 
 /**
  * Working sets and volume (kg × reps, × 2 for each side) per muscle group. Muscle group, each side
  * and plate weight are read from the exercises as they are now; the unit from the entry.
  */
-export function recapOf(workout: Workout, exercises: Map<string, Exercise>, bodyKg: number | null): Recap {
+export function recapOf(workout: Workout, exercises: Map<string, Exercise>): Recap {
   const totals = new Map<MuscleGroup, { sets: number; volume: number }>();
   const leftOut: Recap['leftOut'] = [];
   for (const entry of workout.entries) {
@@ -91,13 +83,13 @@ export function recapOf(workout: Workout, exercises: Map<string, Exercise>, body
     let unknown = false;
     for (const s of working) {
       total.sets += 1;
-      const kg = setKg(s.weight, entry.unit, exercise, bodyKg);
+      const kg = setKg(s.weight, entry.unit, exercise);
       if (kg === null) unknown = true;
       else total.volume += kg * (s.reps ?? 0) * (exercise.eachSide ? 2 : 1);
     }
     totals.set(exercise.muscle, total);
     if (unknown && !leftOut.some((l) => l.name === exercise.name)) {
-      leftOut.push({ name: exercise.name, reason: entry.unit === 'bodyweight' ? 'bodyweight' : 'plates' });
+      leftOut.push({ name: exercise.name, reason: 'plates' });
     }
   }
   const rows = MUSCLE_GROUPS.flatMap((muscle) => {
@@ -173,4 +165,43 @@ export function workoutMinutes(w: Pick<Workout, 'startedAt' | 'finishedAt'>): nu
   if (!w.finishedAt) return null;
   const minutes = Math.round((new Date(w.finishedAt).getTime() - new Date(w.startedAt).getTime()) / 60_000);
   return minutes > 0 ? minutes : null;
+}
+
+type UnitData = { exercises: Exercise[]; routines: Routine[]; workouts: Workout[] };
+
+/**
+ * The one-time move to kg and lb only. Exercises in plates or bodyweight become kg; start weights
+ * that were plate counts are cleared; bodyweight entries become kg (an empty weight meant +0, so 0).
+ * Old plate entries stay as logged: "14 plates" can't become kg without a plate weight.
+ * Returns only the records it changed, each stamped `now`. Units are read as plain strings because
+ * old records hold values the current types don't allow.
+ */
+export function cleanUpUnits(data: UnitData, now: string): UnitData {
+  const unitOf = (r: { unit: string }) => r.unit;
+  const fromPlates = new Set(data.exercises.filter((e) => unitOf(e) === 'plates').map((e) => e.id));
+  const exercises = data.exercises
+    .filter((e) => unitOf(e) === 'plates' || unitOf(e) === 'bodyweight')
+    .map((e) => ({ ...e, unit: 'kg' as const, updatedAt: now }));
+  const routines = data.routines
+    .filter((r) => r.items.some((i) => fromPlates.has(i.exerciseId) && i.startWeight !== undefined))
+    .map((r) => ({
+      ...r,
+      items: r.items.map((i) => {
+        if (!fromPlates.has(i.exerciseId)) return i;
+        const { startWeight: _plates, ...rest } = i;
+        return rest;
+      }),
+      updatedAt: now,
+    }));
+  const isBodyweight = (e: WorkoutEntry) => unitOf(e) === 'bodyweight';
+  const workouts = data.workouts
+    .filter((w) => w.entries.some(isBodyweight))
+    .map((w) => ({
+      ...w,
+      entries: w.entries.map((e) =>
+        isBodyweight(e) ? { ...e, unit: 'kg' as const, sets: e.sets.map((s) => ({ ...s, weight: s.weight ?? 0 })) } : e,
+      ),
+      updatedAt: now,
+    }));
+  return { exercises, routines, workouts };
 }

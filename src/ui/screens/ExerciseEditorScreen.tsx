@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { db } from '../../db/db';
 import { isLive } from '../../db/records';
-import type { Exercise, MuscleGroup, WeightUnit } from '../../db/types';
+import type { Exercise, ExerciseUnit, MuscleGroup } from '../../db/types';
 import { deleteExercise, listExercises, saveExercise } from '../../db/workouts';
-import { MUSCLE_GROUPS, parseLift, WEIGHT_UNITS } from '../../domain/workouts';
+import { MUSCLE_GROUPS, WEIGHT_UNITS } from '../../domain/workouts';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Field, Screen } from '../components/ui';
 import { WEIGHT_UNIT_NAMES } from '../labels';
@@ -16,9 +16,7 @@ function ExerciseForm({ existing }: { existing: Exercise | null }) {
   const navigate = useNavigate();
   const [name, setName] = useState(existing?.name ?? '');
   const [muscle, setMuscle] = useState<MuscleGroup | ''>(existing?.muscle ?? '');
-  const [unit, setUnit] = useState<WeightUnit>(existing?.unit ?? 'kg');
-  const [plateValue, setPlateValue] = useState(existing?.plateWeight ? String(existing.plateWeight.value) : '');
-  const [plateUnit, setPlateUnit] = useState<'kg' | 'lb'>(existing?.plateWeight?.unit ?? 'kg');
+  const [unit, setUnit] = useState<ExerciseUnit>(existing?.unit ?? 'kg');
   const [eachSide, setEachSide] = useState(existing?.eachSide ?? false);
   const [note, setNote] = useState(existing?.note ?? '');
   const [error, setError] = useState<string | null>(null);
@@ -32,14 +30,8 @@ function ExerciseForm({ existing }: { existing: Exercise | null }) {
     if ((await listExercises()).some((e) => e.id !== existing?.id && fold(e.name) === fold(trimmed))) {
       return setError(`There's already an exercise called ${trimmed}`);
     }
-    // Kept even when the unit isn't plates any more, so sets logged in plates still count.
-    let plateWeight: Exercise['plateWeight'];
-    if (plateValue.trim() !== '') {
-      const value = parseLift(plateValue);
-      if (value === null || value === 0) {
-        if (unit === 'plates') return setError('Enter what one plate weighs, or leave it empty');
-      } else plateWeight = { value, unit: plateUnit };
-    }
+    // A plate weight from when plates were a unit is kept, so old plate sets still count.
+    const plateWeight = existing?.plateWeight;
     await saveExercise({ name: trimmed, muscle, unit, ...(plateWeight ? { plateWeight } : {}), eachSide, note: note.trim() }, existing?.id);
     navigate(BACK);
   }
@@ -72,7 +64,7 @@ function ExerciseForm({ existing }: { existing: Exercise | null }) {
             </select>
           </Field>
           <Field label="Unit">
-            <select className={select} value={unit} onChange={(e) => setUnit(e.target.value as WeightUnit)}>
+            <select className={select} value={unit} onChange={(e) => setUnit(e.target.value as ExerciseUnit)}>
               {WEIGHT_UNITS.map((u) => (
                 <option key={u} value={u}>
                   {WEIGHT_UNIT_NAMES[u]}
@@ -81,19 +73,6 @@ function ExerciseForm({ existing }: { existing: Exercise | null }) {
             </select>
           </Field>
         </div>
-        {unit === 'plates' && (
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="1 plate =">
-              <input className={input} inputMode="decimal" value={plateValue} placeholder="Not set" onChange={(e) => setPlateValue(e.target.value)} />
-            </Field>
-            <Field label="Plate unit">
-              <select className={select} value={plateUnit} onChange={(e) => setPlateUnit(e.target.value as 'kg' | 'lb')}>
-                <option value="kg">kg</option>
-                <option value="lb">lb</option>
-              </select>
-            </Field>
-          </div>
-        )}
         <label className="flex min-h-11 items-center gap-3">
           <input type="checkbox" className="size-5 accent-accent" checked={eachSide} onChange={(e) => setEachSide(e.target.checked)} />
           <span>Each side</span>
@@ -122,7 +101,7 @@ function ExerciseForm({ existing }: { existing: Exercise | null }) {
   );
 }
 
-/** Edits an exercise: name, muscle group, unit, plate weight, each side and note. */
+/** Edits an exercise: name, muscle group, unit (kg or lb), each side and note. */
 export function ExerciseEditorScreen() {
   const { id = 'new' } = useParams();
   const [loaded, setLoaded] = useState<{ id: string; existing: Exercise | null } | null>(null);

@@ -100,7 +100,7 @@ function NoteBox({ exercise }: { exercise: Exercise }) {
   );
 }
 
-const UNIT_LABEL = { kg: 'kg', lb: 'lb', plates: 'pl', bodyweight: 'kg' } as const;
+const UNIT_LABEL = { kg: 'kg', lb: 'lb', plates: 'pl' } as const;
 
 /** A weight or reps box in a set row: its own width (the shared input class is full width). */
 const setBox =
@@ -125,7 +125,6 @@ function SetRow({
     <li className="space-y-1">
       <div className="flex items-center gap-1.5">
         <span className={`w-7 shrink-0 text-center text-sm font-semibold ${set.warmup ? 'text-warn' : 'text-muted'}`}>{tag}</span>
-        {unit === 'bodyweight' && <span className="text-sm text-muted">+</span>}
         <NumberBox
           label={`${label} weight`}
           value={set.weight}

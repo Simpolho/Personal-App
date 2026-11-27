@@ -113,7 +113,7 @@ test('a water record with a non-number amount is refused', async () => {
   await expect(importAll(bad)).rejects.toBeInstanceOf(ImportError);
 });
 test('exercises, routines and workouts go through a backup and back exactly', async () => {
-  const ex = await saveExercise({ name: 'Bench', muscle: 'Chest', unit: 'plates', plateWeight: { value: 5, unit: 'kg' }, eachSide: false, note: 'seat 4' });
+  const ex = await saveExercise({ name: 'Bench', muscle: 'Chest', unit: 'kg', plateWeight: { value: 5, unit: 'kg' }, eachSide: false, note: 'seat 4' });
   const routine = await saveRoutine({ name: 'Upper A', weekdays: [1], items: [{ exerciseId: ex.id, sets: 3, repsMin: 6, repsMax: 10, rpeTarget: '≤8', startWeight: 22.5 }] });
   const started = await startWorkout({ routineId: routine.id, date: '2026-11-23' });
   await saveWorkout({ ...started, entries: started.entries.map((e) => ({ ...e, sets: e.sets.map((s) => ({ ...s, reps: 8, rpe: 8, done: true })) })) });
@@ -155,4 +155,41 @@ test('a damaged day choice or rest set is refused', async () => {
   ];
   for (const records of bad) await expect(importAll(file(records))).rejects.toBeInstanceOf(ImportError);
   expect((await db.days.count()) + (await db.targets.count())).toBe(0);
+});
+const OLD = '2026-11-01T00:00:00.000Z';
+/** A backup made before plates and bodyweight were dropped. */
+const oldUnitsBackup = () => ({
+  format: 'fitness-app-export',
+  version: 1,
+  exportedAt: '',
+  records: {
+    exercises: [
+      { id: 'legext', createdAt: OLD, updatedAt: OLD, name: 'Leg extension', muscle: 'Quads', unit: 'plates', eachSide: false, note: '' },
+      { id: 'backext', createdAt: OLD, updatedAt: OLD, name: 'Back extension', muscle: 'Hamstrings', unit: 'bodyweight', eachSide: false, note: '' },
+    ],
+    workouts: [
+      {
+        id: 'w1',
+        createdAt: OLD,
+        updatedAt: OLD,
+        date: '2026-11-16',
+        name: 'Lower A',
+        startedAt: '2026-11-16T10:00:00.000Z',
+        finishedAt: '2026-11-16T11:00:00.000Z',
+        exerciseIds: ['backext'],
+        entries: [{ id: 'e1', exerciseId: 'backext', unit: 'bodyweight', sets: [{ id: 's1', warmup: false, done: true, reps: 12 }] }],
+      },
+    ],
+  },
+});
+test('an old backup with plates and bodyweight imports cleaned', async () => {
+  await importAll(oldUnitsBackup());
+  expect((await db.exercises.toArray()).map((e) => e.unit)).toEqual(['kg', 'kg']);
+  expect((await db.workouts.get('w1'))!.entries[0]).toMatchObject({ unit: 'kg', sets: [{ weight: 0, reps: 12 }] });
+});
+test('re-importing an old backup does not bring plates back', async () => {
+  await importAll(oldUnitsBackup());
+  await importAll(oldUnitsBackup());
+  expect((await db.exercises.get('legext'))!.unit).toBe('kg');
+  expect((await db.workouts.get('w1'))!.entries[0]!.unit).toBe('kg');
 });

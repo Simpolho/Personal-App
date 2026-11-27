@@ -1,5 +1,5 @@
 import { beforeEach, expect, test, vi } from 'vitest';
-import { resetDb } from './db';
+import { db, resetDb } from './db';
 import type { Workout } from './types';
 import {
   deleteExercise,
@@ -13,6 +13,8 @@ import {
   saveExercise,
   saveRoutine,
   saveWorkout,
+  setExerciseNote,
+  setExerciseUnit,
   startWorkout,
 } from './workouts';
 
@@ -173,10 +175,10 @@ test('exerciseIds follow the entries; an added entry is pre-filled with one set'
 
 test('after an exercise changes unit, last time in the old unit is not used to pre-fill', async () => {
   const { bench, upperA } = await setup();
-  await saveExercise({ ...bench, unit: 'plates' }, bench.id);
+  await saveExercise({ ...bench, unit: 'lb' }, bench.id);
   at('2026-11-16T10:00:00Z');
   const old = await startWorkout({ routineId: upperA.id, date: '2026-11-16' });
-  expect(old.entries[0]?.unit).toBe('plates');
+  expect(old.entries[0]?.unit).toBe('lb');
   await tick(old, 0, [[14, 12]]);
   await finishWorkout(old.id);
   await saveExercise({ ...bench, unit: 'kg' }, bench.id);
@@ -187,4 +189,14 @@ test('after an exercise changes unit, last time in the old unit is not used to p
     [22.5, undefined],
     [22.5, undefined],
   ]);
+});
+
+test('setExerciseUnit changes the unit and nothing else', async () => {
+  const { bench } = await setup();
+  await setExerciseNote(bench.id, 'elbows in');
+  await setExerciseUnit(bench.id, 'lb');
+  const after = (await db.exercises.get(bench.id))!;
+  expect(after).toMatchObject({ unit: 'lb', note: 'elbows in', name: bench.name });
+  await setExerciseUnit(bench.id, 'lb');
+  expect((await db.exercises.get(bench.id))!.updatedAt).toBe(after.updatedAt);
 });

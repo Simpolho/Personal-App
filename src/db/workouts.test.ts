@@ -6,6 +6,7 @@ import {
   deleteWorkout,
   finishWorkout,
   getActiveWorkout,
+  getExerciseHistory,
   lastSetsFor,
   listExercises,
   newEntry,
@@ -199,4 +200,17 @@ test('setExerciseUnit changes the unit and nothing else', async () => {
   expect(after).toMatchObject({ unit: 'lb', note: 'elbows in', name: bench.name });
   await setExerciseUnit(bench.id, 'lb');
   expect((await db.exercises.get(bench.id))!.updatedAt).toBe(after.updatedAt);
+});
+
+test('getExerciseHistory lists finished workouts with that exercise', async () => {
+  const { bench, upperA } = await setup();
+  at('2026-11-16T10:00:00Z');
+  const done = await startWorkout({ routineId: upperA.id, date: '2026-11-16' });
+  await tick(done, 0, [[60, 8]]);
+  await finishWorkout(done.id);
+  at('2026-11-23T10:00:00Z');
+  await startWorkout({ routineId: upperA.id, date: '2026-11-23' }); // still in progress
+  const history = await getExerciseHistory(bench.id);
+  expect(history.map((h) => [h.workoutId, h.date])).toEqual([[done.id, '2026-11-16']]);
+  expect(history[0]!.sets.map((s) => [s.weight, s.reps])).toEqual([[60, 8]]);
 });

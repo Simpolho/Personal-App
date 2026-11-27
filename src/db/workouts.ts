@@ -2,6 +2,7 @@ import { nowIso } from '../domain/dates';
 import { finishedVersion, isWorkingSet, prefillSets } from '../domain/workouts';
 import { db } from './db';
 import { isLive, newRecord, softDeleted, touched } from './records';
+import { exerciseHistory, type HistorySession } from '../domain/history';
 import type { BaseRecord, EntryUnit, Exercise, ExerciseUnit, Routine, Workout, WorkoutEntry, WorkoutSet } from './types';
 
 export type ExerciseFields = Omit<Exercise, keyof BaseRecord>;
@@ -83,6 +84,11 @@ export async function lastSetsFor(exerciseId: string, before: string, excludeId?
     if (sets.length > 0) return sets;
   }
   return null;
+}
+
+/** Every finished session of an exercise, newest first, for its history screen. */
+export async function getExerciseHistory(exerciseId: string): Promise<HistorySession[]> {
+  return exerciseHistory(exerciseId, await db.workouts.where('exerciseIds').equals(exerciseId).distinct().toArray());
 }
 
 /** A new entry for an exercise added mid-workout: `count` sets (one by default), pre-filled from last time. */
